@@ -232,6 +232,24 @@ BUDGET_CATEGORIES = [
 ]
 
 
+# ─── Construction Stages ──────────────────────────────────────────────────────
+
+CONSTRUCTION_STAGES = [
+    {"stage": 1, "name": "Planning & Documentation", "description": "Get all approvals & documents ready", "linked_chapter": 9},
+    {"stage": 2, "name": "Site Preparation & Soil Testing", "description": "Clear the plot, test soil quality", "linked_chapter": 2},
+    {"stage": 3, "name": "Foundation Work", "description": "Lay the foundation as per approved plan", "linked_chapter": 8},
+    {"stage": 4, "name": "Plinth & Ground Floor Structure", "description": "Build plinth beam and ground slab", "linked_chapter": 8},
+    {"stage": 5, "name": "Walls & Columns (Ground Floor)", "description": "Raise brick walls and RCC columns", "linked_chapter": 8},
+    {"stage": 6, "name": "Roof Slab & First Floor", "description": "Cast the roof slab for ground floor", "linked_chapter": 8},
+    {"stage": 7, "name": "Walls & Columns (First Floor)", "description": "Continue walls for first floor if any", "linked_chapter": 8},
+    {"stage": 8, "name": "Plumbing & Electrical Work", "description": "Run all pipes and electrical conduits", "linked_chapter": 14},
+    {"stage": 9, "name": "Plastering, Flooring & Tiling", "description": "Apply plaster, lay tiles and flooring", "linked_chapter": 12},
+    {"stage": 10, "name": "Final Finishing & Handover", "description": "Paint, fixtures, cleanup and move in", "linked_chapter": 22},
+]
+
+TOTAL_STAGES = len(CONSTRUCTION_STAGES)
+
+
 @app.on_event("startup")
 async def startup_event():
     # Create indexes
@@ -335,7 +353,9 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
 
     # Construction stage
     stage_doc = await db.construction_stage.find_one({"user_id": user_id}, {"_id": 0})
-    current_stage = stage_doc["current_stage"] if stage_doc else "Not Started"
+    current_stage_num = stage_doc["current_stage"] if stage_doc else 1
+    stage_info = next((s for s in CONSTRUCTION_STAGES if s["stage"] == current_stage_num), CONSTRUCTION_STAGES[0])
+    current_stage = f"Stage {current_stage_num}: {stage_info['name']}"
 
     return DashboardSummary(
         reading_progress=reading_progress,
@@ -664,6 +684,61 @@ async def create_custom_category(data: CustomCategoryCreate, current_user: dict 
         "created_at": now,
     })
     return {"success": True, "category": {"key": key, "name": data.name.strip(), "icon": "wallet"}}
+
+
+# ─── Progress Tracker Routes ─────────────────────────────────────────────────
+
+class SetStage(BaseModel):
+    stage: int
+
+
+@api_router.get("/progress")
+async def get_progress(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    stage_doc = await db.construction_stage.find_one({"user_id": user_id}, {"_id": 0})
+    current_stage_num = stage_doc["current_stage"] if stage_doc else 1
+
+    stages = []
+    for s in CONSTRUCTION_STAGES:
+        if s["stage"] < current_stage_num:
+            status = "completed"
+        elif s["stage"] == current_stage_num:
+            status = "current"
+        else:
+            status = "upcoming"
+        stages.append({**s, "status": status})
+
+    completion_pct = int(((current_stage_num - 1) / TOTAL_STAGES) * 100)
+
+    return {
+        "current_stage": current_stage_num,
+        "total_stages": TOTAL_STAGES,
+        "completion_pct": completion_pct,
+        "stages": stages,
+    }
+
+
+@api_router.post("/progress/set-stage")
+async def set_current_stage(data: SetStage, current_user: dict = Depends(get_current_user)):
+    if data.stage < 1 or data.stage > TOTAL_STAGES:
+        raise HTTPException(status_code=400, detail="Invalid stage number")
+
+    user_id = current_user["id"]
+    now = datetime.now(timezone.utc).isoformat()
+
+    await db.construction_stage.update_one(
+        {"user_id": user_id},
+        {"$set": {"current_stage": data.stage, "updated_at": now}},
+        upsert=True,
+    )
+
+    stage_info = CONSTRUCTION_STAGES[data.stage - 1]
+    return {
+        "success": True,
+        "current_stage": data.stage,
+        "stage_name": stage_info["name"],
+        "completion_pct": int(((data.stage - 1) / TOTAL_STAGES) * 100),
+    }
 
 
 # ─── Health Check ────────────────────────────────────────────────────────────

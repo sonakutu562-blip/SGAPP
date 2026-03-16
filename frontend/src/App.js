@@ -10,6 +10,7 @@ import GuideListPage from "@/pages/GuideListPage";
 import ChapterDetailPage from "@/pages/ChapterDetailPage";
 import ChecklistsPage from "@/pages/ChecklistsPage";
 import BudgetTrackerPage from "@/pages/BudgetTrackerPage";
+import ProgressTrackerPage from "@/pages/ProgressTrackerPage";
 import "@/App.css";
 
 function ProtectedRoute({ children }) {
@@ -63,7 +64,7 @@ function App() {
             <Route path="guide/:chapterNumber" element={<ChapterDetailPage />} />
             <Route path="checklists" element={<ChecklistsPage />} />
             <Route path="budget" element={<BudgetTrackerPage />} />
-            <Route path="progress" element={<PlaceholderPage title="Progress Tracker" />} />
+            <Route path="progress" element={<ProgressTrackerPage />} />
             <Route path="library" element={<PlaceholderPage title="My Library" />} />
             <Route path="ai" element={<PlaceholderPage title="AI Assistant" />} />
             <Route path="settings" element={<PlaceholderPage title="Settings" />} />

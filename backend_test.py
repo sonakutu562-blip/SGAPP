@@ -622,8 +622,150 @@ class SundarGharAPITester:
             return True
         return False
 
+    def test_get_progress(self):
+        """Test GET /progress - returns 10 stages with status based on current stage"""
+        success, response = self.run_test(
+            "Get Progress Tracker",
+            "GET",
+            "/progress",
+            200,
+            auth_required=True
+        )
+        if success:
+            required_fields = ['current_stage', 'total_stages', 'completion_pct', 'stages']
+            if not all(field in response for field in required_fields):
+                print(f"❌ Missing fields in progress response")
+                return False
+            
+            current_stage = response.get('current_stage', 0)
+            total_stages = response.get('total_stages', 0)
+            completion_pct = response.get('completion_pct', 0)
+            stages = response.get('stages', [])
+            
+            print(f"   ✓ Current stage: {current_stage}")
+            print(f"   ✓ Total stages: {total_stages}")
+            print(f"   ✓ Completion percentage: {completion_pct}%")
+            print(f"   ✓ Stages returned: {len(stages)}")
+            
+            # Should have exactly 10 stages
+            if len(stages) != 10:
+                print(f"❌ Expected 10 stages, got {len(stages)}")
+                return False
+                
+            if total_stages != 10:
+                print(f"❌ Expected total_stages=10, got {total_stages}")
+                return False
+            
+            # Verify stage structure and statuses
+            completed_count = 0
+            current_count = 0
+            upcoming_count = 0
+            
+            for stage in stages:
+                stage_fields = ['stage', 'name', 'description', 'linked_chapter', 'status']
+                if not all(field in stage for field in stage_fields):
+                    print(f"❌ Stage {stage.get('stage', 'unknown')} missing required fields")
+                    return False
+                
+                status = stage.get('status')
+                if status == 'completed':
+                    completed_count += 1
+                elif status == 'current':
+                    current_count += 1
+                elif status == 'upcoming':
+                    upcoming_count += 1
+                else:
+                    print(f"❌ Invalid stage status: {status}")
+                    return False
+            
+            print(f"   ✓ Status breakdown - Completed: {completed_count}, Current: {current_count}, Upcoming: {upcoming_count}")
+            
+            # Should have exactly 1 current stage
+            if current_count != 1:
+                print(f"❌ Expected exactly 1 current stage, got {current_count}")
+                return False
+            
+            # Verify completion percentage matches current stage
+            expected_pct = int(((current_stage - 1) / total_stages) * 100)
+            if completion_pct != expected_pct:
+                print(f"❌ Expected completion_pct={expected_pct}, got {completion_pct}")
+                return False
+            
+            return True
+        return False
+
+    def test_set_stage_valid(self):
+        """Test POST /progress/set-stage with valid stage number"""
+        test_stage = 5
+        success, response = self.run_test(
+            "Set Progress Stage - Valid",
+            "POST",
+            "/progress/set-stage",
+            200,
+            data={"stage": test_stage},
+            auth_required=True
+        )
+        if success:
+            required_fields = ['success', 'current_stage', 'stage_name', 'completion_pct']
+            if not all(field in response for field in required_fields):
+                print(f"❌ Missing fields in set-stage response")
+                return False
+            
+            if not response.get('success', False):
+                print(f"❌ Set stage did not return success")
+                return False
+                
+            if response.get('current_stage') != test_stage:
+                print(f"❌ Stage not set correctly. Expected {test_stage}, got {response.get('current_stage')}")
+                return False
+            
+            print(f"   ✓ Stage set to: {response.get('current_stage')}")
+            print(f"   ✓ Stage name: {response.get('stage_name')}")
+            print(f"   ✓ Completion: {response.get('completion_pct')}%")
+            return True
+        return False
+
+    def test_set_stage_invalid_low(self):
+        """Test POST /progress/set-stage with invalid stage (0) - should return 400"""
+        success, response = self.run_test(
+            "Set Progress Stage - Invalid Low (0)",
+            "POST",
+            "/progress/set-stage",
+            400,
+            data={"stage": 0},
+            auth_required=True
+        )
+        return success
+
+    def test_set_stage_invalid_high(self):
+        """Test POST /progress/set-stage with invalid stage (11) - should return 400"""
+        success, response = self.run_test(
+            "Set Progress Stage - Invalid High (11)",
+            "POST",
+            "/progress/set-stage",
+            400,
+            data={"stage": 11},
+            auth_required=True
+        )
+        return success
+
+    def test_set_stage_reset_to_4(self):
+        """Reset stage back to 4 for frontend testing"""
+        success, response = self.run_test(
+            "Reset Stage to 4 (for frontend testing)",
+            "POST",
+            "/progress/set-stage",
+            200,
+            data={"stage": 4},
+            auth_required=True
+        )
+        if success:
+            print(f"   ✓ Stage reset to 4 for frontend testing")
+            return True
+        return False
+
 def main():
-    print("🧪 Checklists and Budget Modules Testing - Backend APIs")
+    print("🧪 Progress Tracker Module Testing - Backend APIs")
     print("=" * 60)
     
     tester = SundarGharAPITester()
@@ -645,23 +787,16 @@ def main():
         print("❌ Authentication failed - cannot proceed with module tests")
         return 1
     
-    print("\n=== CHECKLIST MODULE TESTS ===")
-    checklist_tests = [
-        tester.test_get_checklists,
-        tester.test_checklist_toggle,
-    ]
-    
-    print("\n=== BUDGET MODULE TESTS ===")
-    budget_tests = [
-        tester.test_get_budget,
-        tester.test_set_budget_total,
-        tester.test_set_category_budget,
-        tester.test_add_expense,
+    print("\n=== PROGRESS TRACKER MODULE TESTS ===")
+    progress_tests = [
+        tester.test_get_progress,
+        tester.test_set_stage_valid,
+        tester.test_set_stage_invalid_low,
+        tester.test_set_stage_invalid_high,
+        tester.test_set_stage_reset_to_4,
     ]
 
-    all_tests = checklist_tests + budget_tests
-    
-    for test_func in all_tests:
+    for test_func in progress_tests:
         try:
             test_func()
         except Exception as e:
