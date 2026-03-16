@@ -161,6 +161,18 @@ export default function ChapterDetailPage() {
 
       {/* Action buttons */}
       <div className="flex flex-col sm:flex-row items-center gap-3 pb-6" data-testid="chapter-actions">
+        {chapterNum > 1 && (
+          <Button
+            variant="outline"
+            onClick={() => navigate(`/dashboard/guide/${chapterNum - 1}`)}
+            className="w-full sm:w-auto h-12 px-6 border-[#1B3A6B] text-[#1B3A6B] hover:bg-blue-50 font-medium"
+            data-testid="previous-chapter-button"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Previous Chapter
+          </Button>
+        )}
+
         {chapter.is_completed ? (
           <Button
             onClick={handleMarkIncomplete}
@@ -184,7 +196,7 @@ export default function ChapterDetailPage() {
           </Button>
         )}
 
-        {chapter.is_completed && !isLastChapter && (
+        {!isLastChapter && (
           <Button
             onClick={() => navigate(`/dashboard/guide/${chapterNum + 1}`)}
             className="w-full sm:w-auto bg-[#1B3A6B] hover:bg-[#152e56] text-white h-12 px-8 font-medium transition-colors duration-200"
