@@ -1,10 +1,11 @@
-from fastapi import FastAPI, APIRouter, Depends, HTTPException
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import json
 from pathlib import Path
 from pydantic import BaseModel, EmailStr
 from typing import List
@@ -12,6 +13,11 @@ import uuid
 from datetime import datetime, timezone, timedelta
 import jwt
 from passlib.context import CryptContext
+import razorpay
+import hmac
+import hashlib
+import secrets
+import string
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -31,6 +37,22 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Security
 security = HTTPBearer()
+
+# Razorpay client
+razorpay_client = razorpay.Client(auth=(
+    os.environ['RAZORPAY_KEY_ID'],
+    os.environ['RAZORPAY_KEY_SECRET']
+))
+
+# Product prices (INR)
+PRODUCT_PRICES = {
+    "main_guide": 499,
+    "cost_calculator": 249,
+    "vaastu_guide": 297,
+    "maintenance_guide": 199,
+    "luxury_decor_guide": 399,
+    "tiles_guide": 499,
+}
 
 # App and Router
 app = FastAPI(title="Sundar Ghar Saathi API")
@@ -121,8 +143,8 @@ SEED_PRODUCTS = [
     {"id": str(uuid.uuid4()), "product_key": "cost_calculator", "product_name": "Construction Cost Calculator", "price": 249, "type": "software"},
     {"id": str(uuid.uuid4()), "product_key": "vaastu_guide", "product_name": "Vaastu Decor Tips Guide", "price": 297, "type": "pdf"},
     {"id": str(uuid.uuid4()), "product_key": "maintenance_guide", "product_name": "Home Maintenance & Aftercare Bible", "price": 199, "type": "pdf"},
-    {"id": str(uuid.uuid4()), "product_key": "luxury_decor_guide", "product_name": "Luxury Home Decor Guide", "price": 388, "type": "pdf"},
-    {"id": str(uuid.uuid4()), "product_key": "tiles_guide", "product_name": "Tiles & Wall Paint Mistakes Guide", "price": 455, "type": "pdf"},
+    {"id": str(uuid.uuid4()), "product_key": "luxury_decor_guide", "product_name": "Luxury Home Decor Guide", "price": 399, "type": "pdf"},
+    {"id": str(uuid.uuid4()), "product_key": "tiles_guide", "product_name": "Tiles & Wall Paint Mistakes Guide", "price": 499, "type": "pdf"},
 ]
 
 # ─── Chapter Data ─────────────────────────────────────────────────────────────
@@ -784,7 +806,7 @@ LIBRARY_PRODUCTS = [
         "product_key": "luxury_decor_guide",
         "name": "Luxury Home Decor Guide",
         "description": "Transform your home into a luxurious, money-attracting space",
-        "price": 388,
+        "price": 399,
         "icon": "sparkles",
         "action_unlocked": "view_pdf",
         "action_label": "View PDF",
@@ -793,7 +815,7 @@ LIBRARY_PRODUCTS = [
         "product_key": "tiles_guide",
         "name": "Tiles & Wall Paint Mistakes Guide",
         "description": "Insider secrets to picking perfect tiles and wall colours",
-        "price": 455,
+        "price": 499,
         "icon": "palette",
         "action_unlocked": "view_pdf",
         "action_label": "View PDF",
@@ -837,6 +859,236 @@ async def get_library(current_user: dict = Depends(get_current_user)):
         "unlocked_count": len(unlocked_keys),
         "total_count": len(LIBRARY_PRODUCTS),
     }
+
+
+# ─── Payment Routes ──────────────────────────────────────────────────────────
+
+class CreateOrderRequest(BaseModel):
+    product_key: str
+    user_email: str = ""
+    user_name: str = ""
+    user_phone: str = ""
+
+class VerifyPaymentRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+    product_key: str
+    user_email: str = ""
+    user_name: str = ""
+    user_phone: str = ""
+
+
+async def get_optional_user(request: Request):
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token_str = auth_header.split(" ")[1]
+        try:
+            payload = jwt.decode(token_str, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            user_id = payload.get("sub")
+            if user_id:
+                user = await db.users.find_one({"id": user_id}, {"_id": 0})
+                return user
+        except Exception:
+            pass
+    return None
+
+
+def generate_random_password(length=10):
+    chars = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(chars) for _ in range(length))
+
+
+@api_router.post("/payments/create-order")
+async def create_payment_order(data: CreateOrderRequest):
+    if data.product_key not in PRODUCT_PRICES:
+        raise HTTPException(status_code=400, detail="Invalid product")
+
+    price = PRODUCT_PRICES[data.product_key]
+    amount_paise = price * 100
+    receipt = f"rcpt_{data.product_key[:10]}_{uuid.uuid4().hex[:8]}"
+
+    try:
+        order = razorpay_client.order.create(data={
+            "amount": amount_paise,
+            "currency": "INR",
+            "payment_capture": 1,
+            "receipt": receipt,
+            "notes": {
+                "product_key": data.product_key,
+                "user_email": data.user_email,
+            }
+        })
+    except Exception as e:
+        logger.error(f"Razorpay order creation failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create payment order")
+
+    product_name = next(
+        (p["product_name"] for p in SEED_PRODUCTS if p["product_key"] == data.product_key),
+        data.product_key
+    )
+
+    return {
+        "order_id": order["id"],
+        "amount": amount_paise,
+        "currency": "INR",
+        "key_id": os.environ['RAZORPAY_KEY_ID'],
+        "product_key": data.product_key,
+        "product_name": product_name,
+    }
+
+
+@api_router.post("/payments/verify")
+async def verify_payment(data: VerifyPaymentRequest, request: Request):
+    try:
+        razorpay_client.utility.verify_payment_signature({
+            "razorpay_order_id": data.razorpay_order_id,
+            "razorpay_payment_id": data.razorpay_payment_id,
+            "razorpay_signature": data.razorpay_signature,
+        })
+    except razorpay.errors.SignatureVerificationError:
+        now = datetime.now(timezone.utc).isoformat()
+        await db.purchases.insert_one({
+            "id": str(uuid.uuid4()),
+            "order_id": data.razorpay_order_id,
+            "razorpay_payment_id": data.razorpay_payment_id,
+            "product_key": data.product_key,
+            "payment_status": "failed",
+            "failure_reason": "signature_verification_failed",
+            "created_at": now,
+        })
+        raise HTTPException(status_code=400, detail="Payment verification failed. Please contact support@sundarghar.in")
+
+    now = datetime.now(timezone.utc).isoformat()
+    current_user = await get_optional_user(request)
+    token_to_return = None
+    user_resp = None
+    is_new_user = False
+
+    if current_user:
+        user_id = current_user["id"]
+    else:
+        existing = await db.users.find_one({"email": data.user_email}, {"_id": 0})
+        if existing:
+            user_id = existing["id"]
+            token_to_return = create_token(user_id)
+            user_resp = {
+                "id": user_id,
+                "name": existing["name"],
+                "email": existing["email"],
+                "phone": existing.get("phone", ""),
+                "is_active": True,
+                "created_at": existing.get("created_at", now),
+            }
+        else:
+            is_new_user = True
+            user_id = str(uuid.uuid4())
+            auto_password = generate_random_password()
+            user_doc = {
+                "id": user_id,
+                "name": data.user_name or data.user_email.split("@")[0],
+                "email": data.user_email,
+                "password_hash": hash_password(auto_password),
+                "phone": data.user_phone or "",
+                "is_active": True,
+                "created_at": now,
+            }
+            await db.users.insert_one(user_doc)
+            logger.info(f"New user created via payment: {data.user_email} (auto-password logged for welcome email)")
+            token_to_return = create_token(user_id)
+            user_resp = {
+                "id": user_id,
+                "name": user_doc["name"],
+                "email": data.user_email,
+                "phone": data.user_phone or "",
+                "is_active": True,
+                "created_at": now,
+            }
+
+    price = PRODUCT_PRICES.get(data.product_key, 0)
+    purchase_doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "order_id": data.razorpay_order_id,
+        "razorpay_payment_id": data.razorpay_payment_id,
+        "amount": price,
+        "product_key": data.product_key,
+        "payment_status": "success",
+        "created_at": now,
+    }
+    await db.purchases.insert_one(purchase_doc)
+
+    await db.user_products.update_one(
+        {"user_id": user_id},
+        {"$addToSet": {"product_keys": data.product_key}, "$set": {"updated_at": now}},
+        upsert=True,
+    )
+
+    result = {
+        "success": True,
+        "product_key": data.product_key,
+        "is_new_user": is_new_user,
+    }
+    if token_to_return:
+        result["token"] = token_to_return
+        result["user"] = user_resp
+
+    return result
+
+
+@api_router.post("/webhook/razorpay")
+async def razorpay_webhook(request: Request):
+    body = await request.body()
+    signature = request.headers.get("X-Razorpay-Signature", "")
+    webhook_secret = os.environ.get("RAZORPAY_WEBHOOK_SECRET", os.environ['RAZORPAY_KEY_SECRET'])
+
+    try:
+        razorpay_client.utility.verify_webhook_signature(
+            body.decode('utf-8'), signature, webhook_secret
+        )
+    except Exception as e:
+        logger.error(f"Webhook signature verification failed: {e}")
+        raise HTTPException(status_code=400, detail="Invalid webhook signature")
+
+    payload = json.loads(body)
+    event = payload.get("event", "")
+    now = datetime.now(timezone.utc).isoformat()
+
+    if event == "payment.captured":
+        payment = payload.get("payload", {}).get("payment", {}).get("entity", {})
+        order_id = payment.get("order_id")
+        payment_id = payment.get("id")
+        notes = payment.get("notes", {})
+        product_key = notes.get("product_key", "")
+
+        await db.purchases.update_one(
+            {"order_id": order_id},
+            {"$set": {"payment_status": "captured", "razorpay_payment_id": payment_id, "webhook_verified": True, "updated_at": now}},
+        )
+
+        if product_key:
+            purchase = await db.purchases.find_one({"order_id": order_id}, {"_id": 0})
+            if purchase and purchase.get("user_id"):
+                await db.user_products.update_one(
+                    {"user_id": purchase["user_id"]},
+                    {"$addToSet": {"product_keys": product_key}, "$set": {"updated_at": now}},
+                    upsert=True,
+                )
+        logger.info(f"Webhook: payment.captured - {payment_id} for order {order_id}")
+
+    elif event == "payment.failed":
+        payment = payload.get("payload", {}).get("payment", {}).get("entity", {})
+        order_id = payment.get("order_id")
+        payment_id = payment.get("id")
+
+        await db.purchases.update_one(
+            {"order_id": order_id},
+            {"$set": {"payment_status": "failed", "failure_reason": "webhook_payment_failed", "updated_at": now}},
+            upsert=True,
+        )
+        logger.info(f"Webhook: payment.failed - {payment_id} for order {order_id}")
+
+    return {"status": "ok"}
 
 
 # ─── Health Check ────────────────────────────────────────────────────────────

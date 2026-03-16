@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
+import BuyPage from "@/pages/BuyPage";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import DashboardHome from "@/pages/DashboardHome";
 import GuideListPage from "@/pages/GuideListPage";
@@ -59,6 +60,7 @@ function App() {
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
           <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/buy" element={<BuyPage />} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route index element={<DashboardHome />} />
             <Route path="guide" element={<GuideListPage />} />
