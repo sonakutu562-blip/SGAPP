@@ -1,0 +1,160 @@
+{
+  "project_name": "Sundar Ghar Saathi",
+  "design_philosophy": {
+    "identity": "The Anti-AI Designer (E1)",
+    "core_principles": [
+      "Trustworthy & Premium: Deep blues and clean whites to establish authority.",
+      "Indian Context: Warmth through orange accents and relatable imagery.",
+      "Mobile-First: Bottom navigation for ease of use on phones.",
+      "Clarity over Clutter: High contrast, readable fonts, and distinct hierarchy."
+    ],
+    "mood": "Professional, Secure, Aspirational, Warm",
+    "theme": "light"
+  },
+  "typography": {
+    "font_family": {
+      "heading": "Poppins, sans-serif",
+      "body": "Poppins, sans-serif"
+    },
+    "weights": {
+      "heading": "700",
+      "subheading": "600",
+      "body": "400",
+      "medium": "500"
+    },
+    "sizes": {
+      "h1": "text-3xl md:text-4xl lg:text-5xl",
+      "h2": "text-2xl md:text-3xl",
+      "h3": "text-xl md:text-2xl",
+      "body": "text-base",
+      "small": "text-sm",
+      "tiny": "text-xs"
+    },
+    "rules": [
+      "Use Bold (700) for all major headings.",
+      "Use Regular (400) for body text to ensure readability.",
+      "Headings should be dark (#1A1A1A) or Primary Blue (#1B3A6B).",
+      "Avoid using Inter or default sans-serif fonts."
+    ]
+  },
+  "colors": {
+    "palette": {
+      "primary": "#1B3A6B",
+      "secondary": "#E8500A",
+      "background": "#FFFFFF",
+      "surface": "#F8FAFC",
+      "text": {
+        "primary": "#1A1A1A",
+        "secondary": "#64748B",
+        "inverse": "#FFFFFF"
+      },
+      "border": "#E2E8F0",
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444"
+    },
+    "usage_rules": {
+      "primary": "Use for Sidebar background, Primary Headings, Active States (text), and borders.",
+      "secondary": "Use strictly for Call-to-Actions (Buttons), Highlights, and important notifications. DO NOT overuse.",
+      "background": "Main page background should be White (#FFFFFF) or very light Slate (#F8FAFC).",
+      "sidebar": "Deep Blue (#1B3A6B) background with White text. Active link: White bg/text with Orange accent or transparent with Orange text."
+    }
+  },
+  "spacing": {
+    "container": "container mx-auto px-4 md:px-6",
+    "section": "py-8 md:py-12 lg:py-16",
+    "card_padding": "p-6",
+    "grid_gap": "gap-4 md:gap-6",
+    "scale": {
+      "small": "p-2",
+      "medium": "p-4",
+      "large": "p-8",
+      "xlarge": "p-12"
+    }
+  },
+  "layout_strategy": {
+    "dashboard": "Bento Grid System",
+    "mobile_nav": "Bottom Navigation Bar (Fixed)",
+    "desktop_nav": "Sidebar (Fixed Left)",
+    "grid_rules": [
+      "Mobile: Single column (grid-cols-1).",
+      "Tablet: Two columns (grid-cols-2).",
+      "Desktop: Four columns (grid-cols-4) for summary cards.",
+      "Summary Cards: Use a 4-column grid where each card takes 1 column on desktop, 2 on tablet, 4 on mobile."
+    ]
+  },
+  "components": {
+    "buttons": {
+      "style": "rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md",
+      "primary": "bg-[#1B3A6B] text-white hover:bg-[#152e56]",
+      "secondary": "border-2 border-[#1B3A6B] text-[#1B3A6B] hover:bg-blue-50",
+      "cta": "bg-[#E8500A] text-white hover:bg-[#d14404] shadow-md hover:shadow-lg transform hover:-translate-y-0.5",
+      "ghost": "text-[#1B3A6B] hover:bg-blue-50"
+    },
+    "cards": {
+      "style": "bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-200",
+      "dashboard_summary": "flex flex-col justify-between h-full p-6"
+    },
+    "inputs": {
+      "style": "rounded-lg border-slate-200 focus:border-[#1B3A6B] focus:ring-[#1B3A6B] bg-white"
+    },
+    "navigation": {
+      "sidebar": "bg-[#1B3A6B] text-white h-screen w-64 hidden md:flex flex-col fixed left-0 top-0",
+      "sidebar_link": "flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-colors text-sm font-medium",
+      "sidebar_link_active": "bg-white/10 text-[#E8500A] border-l-4 border-[#E8500A]",
+      "bottom_nav": "bg-white border-t border-slate-200 fixed bottom-0 left-0 w-full md:hidden flex justify-around py-3 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]",
+      "bottom_nav_item": "flex flex-col items-center gap-1 text-xs text-slate-500",
+      "bottom_nav_active": "text-[#E8500A] font-semibold"
+    }
+  },
+  "visual_enhancers": {
+    "shadows": {
+      "card": "shadow-[0_2px_8px_rgba(27,58,107,0.08)]",
+      "hover": "shadow-[0_8px_16px_rgba(27,58,107,0.12)]"
+    },
+    "gradients": "Avoid heavy gradients. Use subtle linear gradients for 'Premium' card backgrounds (e.g., White to Slate-50).",
+    "rounded": "rounded-xl for cards, rounded-lg for buttons/inputs.",
+    "textures": "Use subtle noise or geometric pattern (opacity 0.03) on the Auth pages background if possible."
+  },
+  "assets": {
+    "icons": {
+      "library": "lucide-react",
+      "style": "Stroke width 2px, size 20px or 24px."
+    },
+    "images": {
+      "hero_bg": "https://images.unsplash.com/photo-1744311971549-9c529b60b98a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MTN8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjBpbmRpYW4lMjBob21lJTIwZXh0ZXJpb3IlMjBhcmNoaXRlY3R1cmV8ZW58MHx8fHwxNzczNjM5NDAwfDA&ixlib=rb-4.1.0&q=85",
+      "construction_abstract": "https://images.unsplash.com/photo-1631171992385-784ae02b1acb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2ODl8MHwxfHNlYXJjaHwzfHxpbmRpYW4lMjBjb25zdHJ1Y3Rpb24lMjB3b3JrZXIlMjBzaXRlfGVufDB8fHx8MTc3MzYzOTQwOHww&ixlib=rb-4.1.0&q=85",
+      "luxury_home": "https://images.unsplash.com/photo-1643602475901-9f67ab7d8196?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzJ8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjBsdXh1cnklMjBob3VzZSUyMGluZGlhfGVufDB8fHx8MTc3MzYzOTQwOHww&ixlib=rb-4.1.0&q=85",
+      "happy_family": "https://images.unsplash.com/photo-1679335026558-3e71768f0af9?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNDR8MHwxfHNlYXJjaHw0fHxoYXBweSUyMGluZGlhbiUyMGZhbWlseSUyMG5ldyUyMGhvbWV8ZW58MHx8fHwxNzczNjM5NDA5fDA&ixlib=rb-4.1.0&q=85",
+      "logo_placeholder": "https://via.placeholder.com/150/1B3A6B/FFFFFF?text=SGS"
+    }
+  },
+  "motion": {
+    "page_transition": "initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}",
+    "card_hover": "whileHover={{ y: -4, transition: { duration: 0.2 } }}",
+    "button_tap": "whileTap={{ scale: 0.98 }}"
+  },
+  "accessibility": {
+    "contrast": "Ensure text contrast ratio is at least 4.5:1. Blue text on White is safe. Orange text on White needs to be large or bold.",
+    "focus_states": "All interactive elements must have a visible focus ring (ring-2 ring-offset-2 ring-[#1B3A6B]).",
+    "labels": "All inputs must have visible labels or aria-labels."
+  },
+  "instructions_to_main_agent": [
+    "Implement the 'Auth Layout' separate from 'Dashboard Layout'.",
+    "Use 'Outlet' from react-router-dom for nested routing in Dashboard.",
+    "For the Sidebar, create a recursive or mapped component using the list: Dashboard, My Guide, Checklists, Budget Tracker, Progress Tracker, My Library, AI Assistant, Settings.",
+    "The 'My Guide', 'Checklists', etc. should be protected routes.",
+    "Mobile Navigation should ONLY show: Dashboard (Home), Progress (Tracker), Menu (More). Keep it simple, max 4-5 items. Maybe 'Home', 'Guide', 'Budget', 'Menu'.",
+    "Use Shadcn components but override the default radius to '0.5rem' or '0.75rem' (rounded-lg/xl) to match the friendly vibe.",
+    "The Dashboard Summary Cards should be: Reading Progress, Checklist Progress, Budget Used, Construction Stage.",
+    "Remember: NO EMOJIS in UI. Use Lucide React icons."
+  ],
+  "UNIVERSAL_GUIDELINES": [
+    "Don't make generic centered layouts.",
+    "Create depth through layered design elements.",
+    "Every interaction needs micro-animations.",
+    "Use generous spacing (p-6, p-8).",
+    "Use specific properties for transitions (NOT transition: all).",
+    "Add 'data-testid' to all interactive elements."
+  ]
+}
