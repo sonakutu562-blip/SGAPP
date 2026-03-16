@@ -26,22 +26,18 @@ Build "Sundar Ghar Saathi" - a paid learning and tools platform for Indian homeo
 - [x] MongoDB collections: users, products, user_progress, checklist_items, budget_entries, construction_stage, chat_history
 - [x] 6 products seeded (guides + calculator)
 - [x] Auth endpoints: POST /api/auth/signup, POST /api/auth/login, GET /api/auth/me
-- [x] Dashboard summary endpoint: GET /api/dashboard/summary
+- [x] Dashboard summary endpoint: GET /api/dashboard/summary (uses 22 chapters)
 - [x] Products endpoint: GET /api/products
+- [x] Guide endpoints: GET /api/guide/chapters, GET /api/guide/chapters/{num}, POST /api/guide/chapters/{num}/complete
 - [x] JWT token auth with bcrypt password hashing
-- [x] Email unique index, user ID index
 
 ### Frontend
-- [x] Login page (email + password, split layout with branding)
-- [x] Signup page (name, email, phone, password)
-- [x] Forgot password page (UI only)
-- [x] Dashboard layout with sidebar (desktop) + bottom nav (mobile)
-- [x] Top navbar with user dropdown (settings, logout)
+- [x] Login page, Signup page, Forgot password page (UI only)
+- [x] Dashboard layout with sidebar + bottom nav + top navbar
 - [x] 4 summary cards (Reading Progress, Checklist, Budget, Construction Stage)
-- [x] Welcome message "Namaste, [User Name]!"
-- [x] Protected routes (redirect to login)
-- [x] Brand colors: #1B3A6B primary, #E8500A accent
-- [x] Poppins font, mobile-first design
+- [x] **My Guide - Guide List Page**: Progress banner, 22 chapter cards with status (completed/reading/locked), floating PDF download button
+- [x] **My Guide - Chapter Detail Page**: Chapter header, content, Mark as Complete button, Back to Guide
+- [x] Reading progress syncs between guide and dashboard
 
 ## Prioritized Backlog
 
