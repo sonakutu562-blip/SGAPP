@@ -54,6 +54,8 @@ export default function BudgetTrackerPage() {
     date: new Date().toISOString().split("T")[0],
   });
   const [saving, setSaving] = useState(false);
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
 
   const fetchBudget = useCallback(async () => {
     try {
@@ -128,6 +130,24 @@ export default function BudgetTrackerPage() {
       toast.error("Failed to add expense");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const createCustomCategory = async () => {
+    if (!newCatName.trim()) { toast.error("Enter a category name"); return; }
+    try {
+      const res = await axios.post(`${API}/budget/custom-category`,
+        { name: newCatName.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(`Category "${newCatName.trim()}" created!`);
+      const key = res.data.category.key;
+      setExpForm((p) => ({ ...p, category: key }));
+      setAddingCategory(false);
+      setNewCatName("");
+      fetchBudget();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to create category");
     }
   };
 
@@ -343,7 +363,7 @@ export default function BudgetTrackerPage() {
       )}
 
       {/* ─── Add Expense Dialog ────────────────────────── */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setAddingCategory(false); setNewCatName(""); } }}>
         <DialogContent className="sm:max-w-md" data-testid="add-expense-dialog">
           <DialogHeader>
             <DialogTitle className="text-[#1B3A6B]">Add Expense</DialogTitle>
@@ -351,18 +371,48 @@ export default function BudgetTrackerPage() {
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Category</Label>
-              <Select value={expForm.category} onValueChange={(v) => setExpForm((p) => ({ ...p, category: v }))}>
-                <SelectTrigger data-testid="expense-category-select">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {data?.categories?.map((c) => (
-                    <SelectItem key={c.key} value={c.key} data-testid={`expense-option-${c.key}`}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {addingCategory ? (
+                <div className="space-y-2">
+                  <Input
+                    placeholder="e.g. Garden & Landscaping"
+                    value={newCatName}
+                    onChange={(e) => setNewCatName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && createCustomCategory()}
+                    data-testid="new-category-name-input"
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={createCustomCategory} className="bg-[#E8500A] hover:bg-[#c94408] text-white" data-testid="save-new-category-button">
+                      Create
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => { setAddingCategory(false); setNewCatName(""); }} data-testid="cancel-new-category-button">
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Select value={expForm.category} onValueChange={(v) => {
+                    if (v === "__add_new__") { setAddingCategory(true); return; }
+                    setExpForm((p) => ({ ...p, category: v }));
+                  }}>
+                    <SelectTrigger data-testid="expense-category-select">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {data?.categories?.map((c) => (
+                        <SelectItem key={c.key} value={c.key} data-testid={`expense-option-${c.key}`}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="__add_new__" data-testid="add-new-category-option">
+                        <span className="flex items-center gap-1 text-[#E8500A] font-medium">
+                          <Plus className="h-3 w-3" /> Add New Category
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Amount (&#8377;)</Label>

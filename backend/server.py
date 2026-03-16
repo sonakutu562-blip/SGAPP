@@ -553,6 +553,9 @@ class ExpenseCreate(BaseModel):
     note: str = ""
     date: str = ""
 
+class CustomCategoryCreate(BaseModel):
+    name: str
+
 
 @api_router.get("/budget")
 async def get_budget(current_user: dict = Depends(get_current_user)):
@@ -561,6 +564,12 @@ async def get_budget(current_user: dict = Depends(get_current_user)):
     total_budget = settings.get("total_budget", 0) if settings else 0
     category_budgets = settings.get("category_budgets", {}) if settings else {}
 
+    # Merge preset + custom categories
+    custom_cats = await db.custom_budget_categories.find({"user_id": user_id}, {"_id": 0}).to_list(50)
+    all_categories = list(BUDGET_CATEGORIES) + [
+        {"key": c["key"], "name": c["name"], "icon": "wallet"} for c in custom_cats
+    ]
+
     expenses = await db.budget_expenses.find({"user_id": user_id}, {"_id": 0}).to_list(1000)
     spent_by_cat = {}
     for exp in expenses:
@@ -568,11 +577,11 @@ async def get_budget(current_user: dict = Depends(get_current_user)):
     total_spent = sum(spent_by_cat.values())
 
     categories = []
-    for cat in BUDGET_CATEGORIES:
+    for cat in all_categories:
         categories.append({
             "key": cat["key"],
             "name": cat["name"],
-            "icon": cat["icon"],
+            "icon": cat.get("icon", "wallet"),
             "budgeted_amount": category_budgets.get(cat["key"], 0),
             "spent_amount": spent_by_cat.get(cat["key"], 0),
         })
@@ -627,6 +636,34 @@ async def add_expense(data: ExpenseCreate, current_user: dict = Depends(get_curr
     }
     await db.budget_expenses.insert_one(expense_doc)
     return {"success": True, "expense": {k: v for k, v in expense_doc.items() if k != "_id"}}
+
+
+@api_router.post("/budget/custom-category")
+async def create_custom_category(data: CustomCategoryCreate, current_user: dict = Depends(get_current_user)):
+    import re
+    user_id = current_user["id"]
+    key = re.sub(r'[^a-z0-9]+', '_', data.name.lower()).strip('_')
+    if not key:
+        raise HTTPException(status_code=400, detail="Invalid category name")
+
+    # Check duplicates among preset keys
+    preset_keys = {c["key"] for c in BUDGET_CATEGORIES}
+    if key in preset_keys:
+        raise HTTPException(status_code=400, detail="Category already exists")
+
+    # Check duplicates among user's custom categories
+    existing = await db.custom_budget_categories.find_one({"user_id": user_id, "key": key})
+    if existing:
+        raise HTTPException(status_code=400, detail="Category already exists")
+
+    now = datetime.now(timezone.utc).isoformat()
+    await db.custom_budget_categories.insert_one({
+        "user_id": user_id,
+        "key": key,
+        "name": data.name.strip(),
+        "created_at": now,
+    })
+    return {"success": True, "category": {"key": key, "name": data.name.strip(), "icon": "wallet"}}
 
 
 # ─── Health Check ────────────────────────────────────────────────────────────
