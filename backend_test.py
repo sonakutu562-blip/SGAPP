@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 
 class SundarGharAPITester:
-    def __init__(self, base_url="https://construction-guide-6.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://razorpay-payment.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
         self.test_user_id = None

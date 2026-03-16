@@ -1,0 +1,195 @@
+<analysis>**original_problem_statement:**
+The user wants to integrate the Razorpay payment gateway into the Sundar Ghar Saathi application.
+
+**PRODUCT REQUIREMENTS:**
+1.  **Payment Flow for New Users:**
+    *   A Get Access / Buy Now button should trigger a Razorpay popup for the main guide (₹499).
+    *   After successful payment verification via a backend webhook, a new user account should be created automatically.
+    *   A welcome email with login credentials should be sent.
+    *   The user should be redirected to the .
+
+2.  **Products and Prices (Updated):**
+    *   main_guide: ₹499
+    *   cost_calculator: ₹249
+    *   vaastu_guide: ₹297
+    *   maintenance_guide: ₹199
+    *   luxury_decor_guide: ₹399
+    *   tiles_guide: ₹499
+
+3.  **Payment Page ():**
+    *   A clean page showing product details, price, a Pay Securely with Razorpay button, security badges, and a money-back policy text.
+
+4.  **After Payment Success Logic:**
+    *   Verify the payment signature on the backend.
+    *   Save the transaction to a  collection in MongoDB.
+    *   Unlock the corresponding product in the  collection.
+    *   If it's a new user, create their account.
+
+5.  **Bump Product Payments (from My Library):**
+    *   Clicking Unlock for ₹XXX should open the Razorpay popup for that specific product's price.
+    *   Upon success, unlock the product for the user in the database without a page refresh.
+
+6.  **Payment Failure Handling:**
+    *   Show an error message if the payment fails.
+    *   Log the failed attempt. Do not create an account.
+
+7.  **Webhook Setup:**
+    *   Create a  endpoint.
+    *   It must securely verify the Razorpay webhook signature.
+    *   Handle  and  events.
+
+8.  **Security and Currency:**
+    *    must only be used on the backend.
+    *    can be used on the frontend.
+    *   All amounts must be in INR and converted to paise (amount \* 100) for Razorpay APIs.
+    *   The user provided credentials which have been stored securely.
+
+**User's preferred language**: English
+
+**what currently exists?**
+A full-stack application, Sundar Ghar Saathi, has been built using a FastAPI backend, React frontend, and MongoDB database. Key features are fully implemented and tested, including:
+-   JWT-based user authentication (signup/login).
+-   A main dashboard with summary cards.
+-   **My Guide:** A 22-chapter guide with progress tracking and completion toggles.
+-   **Checklists:** Three checklists with 37 items, with state saved to the database.
+-   **Budget Tracker:** An 8-category budget tool with expense tracking and custom category creation.
+-   **Progress Tracker:** A 10-stage construction timeline to track project progress.
+-   **My Library:** A page displaying all 6 products, showing unlocked status for the main guide and locked for others.
+
+**Last working item**:
+-   Last item agent was working: The agent initiated the Razorpay integration. It successfully retrieved the integration playbook, securely stored the user's Razorpay API keys ( and ), and installed the  Python package in the backend environment.
+-   Status: IN PROGRESS
+-   Agent Testing Done: N
+-   Which testing method agent to use? both
+-   User Testing Done: N
+
+**All Pending/In progress Issue list**:
+There are no outstanding bugs or issues. The current work is focused on new feature development.
+
+**In progress Task List**:
+-   Task 1: **Integrate Razorpay Payment Gateway** (P0)
+    -   Where to resume: The agent has completed the initial setup (playbook, credentials, package installation). The next steps are to implement the backend logic and frontend components for the payment flow.
+        -   **Backend**: Create a new API endpoint  to generate Razorpay orders and another endpoint  to handle webhook events for payment verification.
+        -   **Frontend**: Build the  page for new user purchases and modify the  component to trigger payment popups for unlocking additional products.
+    -   What will be achieved with this?: Users will be able to purchase access to the main guide and unlock additional premium content, enabling monetization for the platform.
+    -   Status: IN PROGRESS
+    -   Should Test frontend/backend/both after fix?: both
+    -   Blocked on something: No
+
+**Upcoming and Future Tasks**
+-   **Upcoming Tasks:**
+    -   Integrate a real PDF viewer for the View PDF buttons in the My Library module. (P1)
+    -   Link the Download PDF button in the My Guide module to an actual downloadable file. (P1)
+    -   Implement the AI Assistant UI shell and integrate an LLM for chat functionality. (P2)
+-   **Future Tasks:**
+    -   Add real content to the guide chapters, replacing the current lorem ipsum placeholders.
+    -   Implement Hindi language support for the entire application.
+    -   Build an admin panel, potentially with an Unlock All Products feature for testing.
+
+**Completed work in this session**
+-   **Project Scaffolding**: Full-stack application setup with FastAPI (backend) and React (frontend).
+-   **Authentication**: Implemented JWT-based authentication with signup (), login (), and protected routes.
+-   **Dashboard Shell ()**: Created the main layout with a top navigation bar, collapsible sidebar, and summary cards.
+-   **My Guide Module ()**: Built a complete 22-chapter guide with progress tracking, chapter detail view, and completion toggle functionality (/, / buttons).
+-   **Checklists Module ()**: Implemented three checklists (Site Visit, Material Quality, Legal Documents) with 37 checkable items and persistent state.
+-   **Budget Tracker Module ()**: Developed a budget management tool with a total budget summary, 8 pre-set expense categories, an expense history list, and functionality to add custom categories.
+-   **Progress Tracker Module ()**: Created a 10-stage vertical timeline for tracking construction progress, allowing users to set their current stage.
+-   **My Library Module ()**: Built a page displaying all 6 products, correctly showing locked/unlocked status based on user purchases.
+
+**Earlier issues found/mentioned but not fixed**
+None. All user-reported issues and requests during this session have been addressed and implemented.
+
+**Known issue recurrence from previous fork**
+None.
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+-   **Backend**: FastAPI, Python
+-   **Frontend**: React.js, Tailwind CSS, Shadcn UI
+-   **Database**: MongoDB
+-   **Authentication**: JSON Web Tokens (JWT) with bcrypt for password hashing.
+-   **Architecture**: RESTful API, Single Page Application (SPA).
+
+**key DB schema**
+-   **users**: 
+-   **products**:  (seeded collection)
+-   **user_products**: 
+-   **purchases**: 
+-   **user_progress**: 
+-   **checklist_items**: 
+-   **budget_entries**: 
+-   **construction_stage**: 
+-   **chat_history**: (schema defined, not yet used)
+
+**changes in tech stack**
+-   The user's initial request was for a Node.js/Express/PostgreSQL stack.
+-   The agent proposed and the user agreed to switch to a **FastAPI/Python/MongoDB** stack, which has been used for the entire implementation.
+
+**All files of reference**
+-   : The single source for all backend logic, including API endpoints, database interactions, and business logic for all modules.
+-   : Contains the main React router setup, defining all public and protected routes for the application.
+-   : Manages user authentication state, including login, logout, and token handling in .
+-   : The primary UI shell for the authenticated part of the app, containing the sidebar and top navigation.
+-   : This directory contains a separate component for each main page/module, such as , , , , and .
+
+**Areas that need refactoring**:
+None at this time. The codebase is well-structured with components organized by feature.
+
+**key api endpoints**
+-   **Auth**: , , 
+-   **Dashboard**: 
+-   **Guide**: , , , 
+-   **Checklists**: , 
+-   **Budget**: , , , , 
+-   **Progress**: , 
+-   **Library**: 
+
+**Critical Info for New Agent**
+-   **Tech Stack**: The project uses **FastAPI (Python) and MongoDB**, not Node.js/PostgreSQL as initially requested by the user. Adhere to this stack.
+-   **Razorpay Credentials**: The user's Razorpay keys have been securely stored using the  tool. Do not ask for them again. Use the  library and the integration playbook provided.
+-   **Design System**: Strictly follow the established design language: Primary color  (deep blue), Accent  (orange), Poppins font, and the existing component styles.
+-   **API Structure**: All backend routes must be prefixed with . All database interactions must handle BSON  correctly to avoid serialization errors.
+
+**documents and test reports created in this job**
+-   
+-   
+-   
+-   
+-   
+-   
+-   
+-   
+
+**Last 10 User Messages and any pending HUMAN messages**
+1.  **User**: Requested the My Library module build. (Completed)
+2.  **User**: Requested the Razorpay payment gateway integration with detailed requirements and provided API keys. (In Progress)
+3.  **User**: Requested adding a Previous Chapter button to the Chapter Detail page. (Completed)
+4.  **User**: Requested two fixes for the My Guide module: a Next Chapter button and a Mark as Incomplete toggle. (Completed)
+5.  **User**: Requested the build of two modules: Checklists and Budget Tracker. (Completed)
+6.  **User**: Requested the My Guide module be built completely. (Completed)
+7.  **User**: Asked to add a custom category option to the budget tracker. (Completed)
+8.  **User**: Requested the Progress Tracker module be built completely. (Completed)
+9.  **User**: Responded to initial clarification questions, confirming the tech stack (FastAPI + MongoDB) and providing specific design requirements (colors, fonts, branding). (Completed)
+10. **System**: Initial problem statement defining the Sundar Ghar Saathi application. (Completed)
+
+**Project Health Check:**
+-   **Working**: All implemented features (Auth, Dashboard, Guide, Checklists, Budget, Progress, Library) are fully functional and have passed E2E tests.
+-   **Mocked**: Some buttons like Download PDF and Open Calculator currently show a toast message (coming soon!) as placeholders for future functionality.
+
+**3rd Party Integrations**
+-   **Razorpay**: In progress. The  Python library (v1.4.3) is installed. Credentials are securely stored.
+
+**Testing status**
+-   **Testing agent used after significant changes**: YES. The testing agent was used successfully after the completion of each major module, achieving high pass rates for backend and frontend tests.
+-   **Troubleshoot agent used after agent stuck in loop**: NO.
+-   **Test files created**: None, the testing agent was used directly.
+-   **Known regressions**: None.
+
+**Credentials to test flow:**
+To test the existing application flow, you can sign up with any test user credentials (e.g.,  / ) on the signup page. For Razorpay testing, the necessary keys are already configured in the environment.
+
+**What agent forgot to execute**
+-   The initial project folder structure was specified as  and . The agent used  and  instead. This is a minor deviation and has been applied consistently, so it's not a functional issue.
+-   The user prompt mentioned a  folder, which is irrelevant due to the switch to MongoDB. The agent correctly ignored this.</analysis>
