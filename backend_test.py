@@ -11,6 +11,7 @@ class SundarGharAPITester:
         self.tests_run = 0
         self.tests_passed = 0
         self.test_results = []
+        self.failed_tests = []
 
     def run_test(self, name, method, endpoint, expected_status, data=None, auth_required=False):
         """Run a single API test"""
@@ -43,10 +44,18 @@ class SundarGharAPITester:
                 self.tests_passed += 1
                 print(f"✅ Passed - Status: {response.status_code}")
                 if response.headers.get('content-type') == 'application/json':
-                    print(f"   Response: {response.json()}")
+                    response_data = response.json()
+                    print(f"   Response: {response_data}")
+                    return success, response_data
             else:
                 print(f"❌ Failed - Expected {expected_status}, got {response.status_code}")
                 print(f"   Response: {response.text}")
+                self.failed_tests.append({
+                    "test": name,
+                    "expected": expected_status,
+                    "actual": response.status_code,
+                    "response": response.text[:200] if response.text else "No response"
+                })
 
             self.test_results.append(result)
             return success, response.json() if response.headers.get('content-type') == 'application/json' else {}
@@ -63,6 +72,10 @@ class SundarGharAPITester:
                 "error": str(e)
             }
             self.test_results.append(result)
+            self.failed_tests.append({
+                "test": name,
+                "error": str(e)
+            })
             return False, {}
 
     def test_health_check(self):
@@ -298,32 +311,139 @@ class SundarGharAPITester:
         )
         return success
 
+    def test_chapter_uncomplete_functionality(self):
+        """Test the uncomplete functionality specifically"""
+        print("\n=== CHAPTER UNCOMPLETE TESTS ===")
+        
+        # First ensure chapter 1 is completed
+        success, _ = self.run_test(
+            "Mark Chapter 1 Complete (setup)",
+            "POST",
+            "guide/chapters/1/complete",
+            200,
+            auth_required=True
+        )
+        
+        # Test uncomplete endpoint for chapter 1 
+        success, uncomplete_response = self.run_test(
+            "POST /api/guide/chapters/1/uncomplete - removes completion",
+            "POST",
+            "guide/chapters/1/uncomplete",
+            200,
+            auth_required=True
+        )
+        
+        if success:
+            expected_fields = ['success', 'chapter_number', 'message', 'completed_count', 'total_chapters']
+            missing_fields = [field for field in expected_fields if field not in uncomplete_response]
+            if missing_fields:
+                print(f"⚠️  Missing response fields: {missing_fields}")
+                return False
+            else:
+                print(f"✅ Uncomplete response has all required fields")
+                print(f"   Completed count after uncomplete: {uncomplete_response.get('completed_count')}")
+        
+        # Test uncomplete endpoint for invalid chapter (should return 404)
+        success, invalid_response = self.run_test(
+            "POST /api/guide/chapters/99/uncomplete - returns 404 for invalid chapter",
+            "POST",
+            "guide/chapters/99/uncomplete",
+            404,
+            auth_required=True
+        )
+        
+        # Restore chapter 1 completion for next tests
+        self.run_test(
+            "Restore Chapter 1 Complete (cleanup)",
+            "POST",
+            "guide/chapters/1/complete",
+            200,
+            auth_required=True
+        )
+        
+        return True
+        
+    def test_guide_list_data_structure(self):
+        """Test guide list endpoint for proper data structure"""
+        print("\n=== GUIDE LIST STRUCTURE TESTS ===")
+        
+        success, guide_data = self.run_test(
+            "Get Guide Chapters List - Check Structure",
+            "GET",
+            "guide/chapters",
+            200,
+            auth_required=True
+        )
+        
+        if success:
+            required_fields = ['total_chapters', 'completed_count', 'chapters']
+            missing_fields = [field for field in required_fields if field not in guide_data]
+            if missing_fields:
+                print(f"❌ Missing guide list response fields: {missing_fields}")
+                return False
+            else:
+                print(f"✅ Guide list has all required fields")
+                print(f"   Total chapters: {guide_data.get('total_chapters')}")
+                print(f"   Completed count: {guide_data.get('completed_count')}")
+                
+                # Check chapter status structure
+                chapters = guide_data.get('chapters', [])
+                if chapters:
+                    first_chapter = chapters[0]
+                    chapter_fields = ['chapter_number', 'title', 'description', 'status']
+                    missing_chapter_fields = [field for field in chapter_fields if field not in first_chapter]
+                    if missing_chapter_fields:
+                        print(f"❌ Missing chapter fields: {missing_chapter_fields}")
+                        return False
+                    else:
+                        print(f"✅ Chapter objects have correct structure")
+                        
+                        # Check if we have both completed and reading statuses
+                        statuses = [ch.get('status') for ch in chapters]
+                        unique_statuses = set(statuses)
+                        print(f"   Chapter statuses found: {unique_statuses}")
+                        
+                        if 'completed' in unique_statuses:
+                            print(f"✅ Found completed chapters")
+                        if 'reading' in unique_statuses:
+                            print(f"✅ Found reading chapter")
+                        if 'locked' in unique_statuses:
+                            print(f"✅ Found locked chapters")
+        
+        return success
+
 def main():
-    print("🚀 Starting Sundar Ghar Saathi API Tests...")
+    print("🧪 Chapter Detail Fix Testing - Backend APIs")
     print("=" * 60)
     
     tester = SundarGharAPITester()
     
-    # Run all tests
-    test_functions = [
-        tester.test_health_check,
-        tester.test_signup_valid,
-        tester.test_signup_duplicate_email, 
-        tester.test_signup_short_password,
-        tester.test_login_valid,
-        tester.test_login_invalid,
-        tester.test_get_me_valid_token,
-        tester.test_get_me_no_token,
-        tester.test_get_products,
-        tester.test_get_dashboard_summary,
-        # Guide API tests
-        tester.test_get_guide_chapters,
-        tester.test_get_chapter_detail,
-        tester.test_mark_chapter_complete,
-        tester.test_mark_invalid_chapter_complete
+    # First login with existing test user (focus on chapter functionality)
+    print("\n=== AUTHENTICATION TEST (EXISTING USER) ===")
+    success, response = tester.run_test(
+        "Login with test user",
+        "POST", 
+        "auth/login",
+        200,
+        data={"email": "test@sundar.com", "password": "password123"}
+    )
+    
+    if success and 'token' in response:
+        tester.token = response['token']
+        print("✅ Authentication successful")
+    else:
+        print("❌ Authentication failed - cannot proceed with chapter tests")
+        return 1
+    
+    # Test the specific chapter detail functionality
+    chapter_tests = [
+        tester.test_chapter_uncomplete_functionality,
+        tester.test_guide_list_data_structure,
+        tester.test_get_chapter_detail,  # existing test
+        tester.test_mark_chapter_complete,  # existing test
     ]
 
-    for test_func in test_functions:
+    for test_func in chapter_tests:
         try:
             test_func()
         except Exception as e:
@@ -332,11 +452,15 @@ def main():
     print("\n" + "=" * 60)
     print(f"📊 Tests passed: {tester.tests_passed}/{tester.tests_run}")
     
-    # Print detailed results
-    print("\n📋 Detailed Results:")
-    for result in tester.test_results:
-        status = "✅" if result['success'] else "❌"
-        print(f"{status} {result['test_name']} - {result['method']} {result['endpoint']} - {result['actual_status']}")
+    # Print failed tests
+    if tester.failed_tests:
+        print(f"\n❌ Failed Tests Summary:")
+        for i, failure in enumerate(tester.failed_tests, 1):
+            print(f"  {i}. {failure.get('test', 'Unknown')}")
+            if 'error' in failure:
+                print(f"     Error: {failure['error']}")
+            else:
+                print(f"     Expected: {failure.get('expected')}, Got: {failure.get('actual')}")
     
     return 0 if tester.tests_passed == tester.tests_run else 1
 

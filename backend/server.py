@@ -371,6 +371,29 @@ async def mark_chapter_complete(chapter_number: int, current_user: dict = Depend
     }
 
 
+@api_router.post("/guide/chapters/{chapter_number}/uncomplete")
+async def unmark_chapter_complete(chapter_number: int, current_user: dict = Depends(get_current_user)):
+    chapter = next((ch for ch in CHAPTERS if ch["chapter_number"] == chapter_number), None)
+    if not chapter:
+        raise HTTPException(status_code=404, detail="Chapter not found")
+
+    user_id = current_user["id"]
+
+    await db.user_progress.delete_one(
+        {"user_id": user_id, "chapter_id": str(chapter_number)}
+    )
+
+    completed_count = await db.user_progress.count_documents({"user_id": user_id, "is_completed": True})
+
+    return {
+        "success": True,
+        "chapter_number": chapter_number,
+        "message": f"Chapter {chapter_number} marked as incomplete",
+        "completed_count": completed_count,
+        "total_chapters": TOTAL_CHAPTERS,
+    }
+
+
 # ─── Health Check ────────────────────────────────────────────────────────────
 
 @api_router.get("/")

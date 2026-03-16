@@ -3,19 +3,21 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Check, BookOpen } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, BookOpen, Undo2, PartyPopper } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const TOTAL_CHAPTERS = 22;
 
 export default function ChapterDetailPage() {
   const { chapterNumber } = useParams();
+  const chapterNum = parseInt(chapterNumber, 10);
   const { token } = useAuth();
   const navigate = useNavigate();
   const [chapter, setChapter] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [completing, setCompleting] = useState(false);
+  const [toggling, setToggling] = useState(false);
 
   useEffect(() => {
     fetchChapter();
@@ -37,7 +39,7 @@ export default function ChapterDetailPage() {
   };
 
   const handleMarkComplete = async () => {
-    setCompleting(true);
+    setToggling(true);
     try {
       await axios.post(
         `${API}/guide/chapters/${chapterNumber}/complete`,
@@ -49,9 +51,28 @@ export default function ChapterDetailPage() {
     } catch {
       toast.error("Failed to mark as complete");
     } finally {
-      setCompleting(false);
+      setToggling(false);
     }
   };
+
+  const handleMarkIncomplete = async () => {
+    setToggling(true);
+    try {
+      await axios.post(
+        `${API}/guide/chapters/${chapterNumber}/uncomplete`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setChapter((prev) => ({ ...prev, is_completed: false }));
+      toast.info(`Chapter ${chapterNumber} marked as incomplete`);
+    } catch {
+      toast.error("Failed to update chapter");
+    } finally {
+      setToggling(false);
+    }
+  };
+
+  const isLastChapter = chapterNum >= TOTAL_CHAPTERS;
 
   if (loading) {
     return (
@@ -76,16 +97,13 @@ export default function ChapterDetailPage() {
       </button>
 
       {/* Chapter header */}
-      <div
-        className="bg-[#1B3A6B] rounded-xl p-6 md:p-8 text-white"
-        data-testid="chapter-header"
-      >
+      <div className="bg-[#1B3A6B] rounded-xl p-6 md:p-8 text-white" data-testid="chapter-header">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center font-bold text-sm">
             {chapter.chapter_number}
           </div>
           <span className="text-xs text-white/50 font-medium uppercase tracking-wider">
-            Chapter {chapter.chapter_number} of 22
+            Chapter {chapter.chapter_number} of {TOTAL_CHAPTERS}
           </span>
         </div>
         <h1 className="text-2xl md:text-3xl font-bold">{chapter.title}</h1>
@@ -125,28 +143,58 @@ export default function ChapterDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Celebration message for last chapter */}
+      {chapter.is_completed && isLastChapter && (
+        <div
+          className="bg-gradient-to-r from-emerald-50 to-amber-50 border border-emerald-200 rounded-xl p-6 text-center"
+          data-testid="celebration-message"
+        >
+          <PartyPopper className="h-10 w-10 text-[#E8500A] mx-auto mb-3" />
+          <h3 className="text-lg font-bold text-[#1B3A6B]">
+            Congratulations!
+          </h3>
+          <p className="text-sm text-slate-600 mt-1">
+            You have completed the entire Sundar Ghar Construction Guide!
+          </p>
+        </div>
+      )}
+
       {/* Action buttons */}
       <div className="flex flex-col sm:flex-row items-center gap-3 pb-6" data-testid="chapter-actions">
         {chapter.is_completed ? (
           <Button
-            disabled
-            className="w-full sm:w-auto bg-emerald-100 text-emerald-700 cursor-not-allowed h-12 px-8 font-medium"
-            data-testid="chapter-completed-button"
+            onClick={handleMarkIncomplete}
+            disabled={toggling}
+            variant="outline"
+            className="w-full sm:w-auto h-12 px-6 border-slate-300 text-slate-600 hover:bg-slate-50 font-medium"
+            data-testid="mark-incomplete-button"
           >
-            <Check className="h-5 w-5 mr-2" />
-            Completed
+            <Undo2 className="h-4 w-4 mr-2" />
+            {toggling ? "Updating..." : "Mark as Incomplete"}
           </Button>
         ) : (
           <Button
             onClick={handleMarkComplete}
-            disabled={completing}
+            disabled={toggling}
             className="w-full sm:w-auto bg-[#E8500A] hover:bg-[#c94408] text-white h-12 px-8 font-medium transition-colors duration-200"
             data-testid="mark-complete-button"
           >
             <BookOpen className="h-5 w-5 mr-2" />
-            {completing ? "Saving..." : "Mark as Complete"}
+            {toggling ? "Saving..." : "Mark as Complete"}
           </Button>
         )}
+
+        {chapter.is_completed && !isLastChapter && (
+          <Button
+            onClick={() => navigate(`/dashboard/guide/${chapterNum + 1}`)}
+            className="w-full sm:w-auto bg-[#1B3A6B] hover:bg-[#152e56] text-white h-12 px-8 font-medium transition-colors duration-200"
+            data-testid="next-chapter-button"
+          >
+            Next Chapter
+            <ArrowRight className="h-5 w-5 ml-2" />
+          </Button>
+        )}
+
         <Button
           variant="outline"
           onClick={() => navigate("/dashboard/guide")}
