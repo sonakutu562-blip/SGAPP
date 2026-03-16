@@ -217,6 +217,87 @@ class SundarGharAPITester:
             return all(field in response for field in expected_fields)
         return False
 
+    def test_get_guide_chapters(self):
+        """Test GET /guide/chapters - should return 22 chapters with status"""
+        success, response = self.run_test(
+            "Get All Guide Chapters",
+            "GET",
+            "/guide/chapters",
+            200,
+            auth_required=True
+        )
+        if success:
+            total_chapters = response.get('total_chapters', 0)
+            completed_count = response.get('completed_count', 0)
+            chapters = response.get('chapters', [])
+            
+            print(f"   ✓ Total chapters: {total_chapters}")
+            print(f"   ✓ Completed: {completed_count}")
+            print(f"   ✓ Chapters returned: {len(chapters)}")
+            
+            # Verify we have 22 chapters
+            if len(chapters) == 22:
+                print("   ✓ Correct number of chapters (22)")
+                # Check chapter statuses
+                completed = [ch for ch in chapters if ch.get('status') == 'completed']
+                reading = [ch for ch in chapters if ch.get('status') == 'reading']
+                locked = [ch for ch in chapters if ch.get('status') == 'locked']
+                
+                print(f"   ✓ Status breakdown - Completed: {len(completed)}, Reading: {len(reading)}, Locked: {len(locked)}")
+                return True
+            else:
+                print(f"   ❌ Expected 22 chapters, got {len(chapters)}")
+        return False
+
+    def test_get_chapter_detail(self, chapter_number=1):
+        """Test GET /guide/chapters/{chapter_number}"""
+        success, response = self.run_test(
+            f"Get Chapter {chapter_number} Detail",
+            "GET",
+            f"/guide/chapters/{chapter_number}",
+            200,
+            auth_required=True
+        )
+        if success:
+            expected_fields = ['chapter_number', 'title', 'description', 'content', 'is_completed']
+            has_all_fields = all(field in response for field in expected_fields)
+            print(f"   ✓ Chapter title: {response.get('title', 'N/A')}")
+            print(f"   ✓ Is completed: {response.get('is_completed', False)}")
+            print(f"   ✓ Has content: {'Yes' if response.get('content') else 'No'}")
+            return has_all_fields
+        return False
+
+    def test_mark_chapter_complete(self, chapter_number=2):
+        """Test POST /guide/chapters/{chapter_number}/complete"""
+        success, response = self.run_test(
+            f"Mark Chapter {chapter_number} Complete",
+            "POST",
+            f"/guide/chapters/{chapter_number}/complete",
+            200,
+            data={},
+            auth_required=True
+        )
+        if success:
+            expected_fields = ['success', 'chapter_number', 'message', 'completed_count', 'total_chapters']
+            has_all_fields = all(field in response for field in expected_fields)
+            print(f"   ✓ Success: {response.get('success', False)}")
+            print(f"   ✓ Message: {response.get('message', 'N/A')}")
+            print(f"   ✓ Completed count: {response.get('completed_count', 0)}")
+            return has_all_fields and response.get('success', False)
+        return False
+
+    def test_mark_invalid_chapter_complete(self):
+        """Test POST /guide/chapters/99/complete - should return 404"""
+        success, response = self.run_test(
+            "Mark Invalid Chapter Complete (should fail)",
+            "POST",
+            "/guide/chapters/99/complete",
+            404,
+            data={},
+            auth_required=True
+        )
+        return success
+
 def main():
     print("🚀 Starting Sundar Ghar Saathi API Tests...")
     print("=" * 60)
@@ -234,7 +315,12 @@ def main():
         tester.test_get_me_valid_token,
         tester.test_get_me_no_token,
         tester.test_get_products,
-        tester.test_get_dashboard_summary
+        tester.test_get_dashboard_summary,
+        # Guide API tests
+        tester.test_get_guide_chapters,
+        tester.test_get_chapter_detail,
+        tester.test_mark_chapter_complete,
+        tester.test_mark_invalid_chapter_complete
     ]
 
     for test_func in test_functions:

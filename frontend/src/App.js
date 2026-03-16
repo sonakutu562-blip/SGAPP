@@ -6,6 +6,8 @@ import SignupPage from "@/pages/SignupPage";
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import DashboardHome from "@/pages/DashboardHome";
+import GuideListPage from "@/pages/GuideListPage";
+import ChapterDetailPage from "@/pages/ChapterDetailPage";
 import "@/App.css";
 
 function ProtectedRoute({ children }) {
@@ -55,7 +57,8 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route index element={<DashboardHome />} />
-            <Route path="guide" element={<PlaceholderPage title="My Guide" />} />
+            <Route path="guide" element={<GuideListPage />} />
+            <Route path="guide/:chapterNumber" element={<ChapterDetailPage />} />
             <Route path="checklists" element={<PlaceholderPage title="Checklists" />} />
             <Route path="budget" element={<PlaceholderPage title="Budget Tracker" />} />
             <Route path="progress" element={<PlaceholderPage title="Progress Tracker" />} />

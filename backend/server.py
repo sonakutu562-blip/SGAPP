@@ -125,6 +125,36 @@ SEED_PRODUCTS = [
     {"id": str(uuid.uuid4()), "product_key": "tiles_guide", "product_name": "Tiles & Wall Paint Mistakes Guide", "price": 455, "type": "pdf"},
 ]
 
+# ─── Chapter Data ─────────────────────────────────────────────────────────────
+
+CHAPTERS = [
+    {"chapter_number": 1, "title": "Your Home Journey", "description": "Visualise your dream home"},
+    {"chapter_number": 2, "title": "Why New Construction?", "description": "Pros of building vs buying"},
+    {"chapter_number": 3, "title": "Are You Ready?", "description": "Assess budget & readiness"},
+    {"chapter_number": 4, "title": "Choosing the Right Builder", "description": "Find trusted contractors"},
+    {"chapter_number": 5, "title": "Budget & Cost Control", "description": "Save lakhs with smart planning"},
+    {"chapter_number": 6, "title": "Site Supervision", "description": "Quality checks at every stage"},
+    {"chapter_number": 7, "title": "Contractor & Labor Management", "description": "Avoid fraud & delays"},
+    {"chapter_number": 8, "title": "Foundation to Roof Mastery", "description": "Build it strong"},
+    {"chapter_number": 9, "title": "Legal & Paperwork Fortress", "description": "Protect yourself legally"},
+    {"chapter_number": 10, "title": "Design, Aesthetics & Vastu", "description": "Beautiful & auspicious home"},
+    {"chapter_number": 11, "title": "Future-Proof & Resale-Ready", "description": "Build smart for tomorrow"},
+    {"chapter_number": 12, "title": "Room-Wise Mistakes", "description": "Kitchen, bedroom, bathroom tips"},
+    {"chapter_number": 13, "title": "Door & Window Frame Mistakes", "description": "Avoid costly errors"},
+    {"chapter_number": 14, "title": "Water Tank & Pipework Checks", "description": "Plumbing done right"},
+    {"chapter_number": 15, "title": "Aftercare & Maintenance", "description": "Keep your home beautiful"},
+    {"chapter_number": 16, "title": "Emotional & Psychological Wins", "description": "Stay stress-free"},
+    {"chapter_number": 17, "title": "Family Vision & Harmony", "description": "Get everyone aligned"},
+    {"chapter_number": 18, "title": "Safety & Disaster Preparedness", "description": "Protect your family"},
+    {"chapter_number": 19, "title": "Waterproofing Hacks", "description": "Never let water damage your home"},
+    {"chapter_number": 20, "title": "Time & Timeline Mastery", "description": "Finish on time"},
+    {"chapter_number": 21, "title": "Advanced Checklists & Questions to Ask", "description": "Be an expert"},
+    {"chapter_number": 22, "title": "Final Handover & Move-In", "description": "Your dream fulfilled"},
+]
+
+TOTAL_CHAPTERS = len(CHAPTERS)
+
+
 @app.on_event("startup")
 async def startup_event():
     # Create indexes
@@ -211,7 +241,7 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
     user_id = current_user["id"]
 
     # Reading progress
-    total_chapters = 20
+    total_chapters = TOTAL_CHAPTERS
     completed = await db.user_progress.count_documents({"user_id": user_id, "is_completed": True})
     reading_progress = int((completed / total_chapters) * 100) if total_chapters > 0 else 0
 
@@ -236,6 +266,109 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
         budget_used=budget_used,
         current_stage=current_stage
     )
+
+
+# ─── Guide Routes ─────────────────────────────────────────────────────────────
+
+@api_router.get("/guide/chapters")
+async def get_guide_chapters(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    # Fetch all completed chapter_ids for this user
+    progress_docs = await db.user_progress.find(
+        {"user_id": user_id, "is_completed": True}, {"_id": 0, "chapter_id": 1}
+    ).to_list(100)
+    completed_ids = {doc["chapter_id"] for doc in progress_docs}
+    completed_count = len(completed_ids)
+
+    # Determine the "reading" chapter (first uncompleted)
+    reading_chapter = None
+    for ch in CHAPTERS:
+        if str(ch["chapter_number"]) not in completed_ids:
+            reading_chapter = ch["chapter_number"]
+            break
+
+    # Build chapter list with status
+    chapters = []
+    for ch in CHAPTERS:
+        ch_id = str(ch["chapter_number"])
+        if ch_id in completed_ids:
+            status = "completed"
+        elif ch["chapter_number"] == reading_chapter:
+            status = "reading"
+        else:
+            status = "locked"
+        chapters.append({**ch, "status": status})
+
+    return {
+        "total_chapters": TOTAL_CHAPTERS,
+        "completed_count": completed_count,
+        "chapters": chapters,
+    }
+
+
+@api_router.get("/guide/chapters/{chapter_number}")
+async def get_chapter_detail(chapter_number: int, current_user: dict = Depends(get_current_user)):
+    # Find chapter data
+    chapter = next((ch for ch in CHAPTERS if ch["chapter_number"] == chapter_number), None)
+    if not chapter:
+        raise HTTPException(status_code=404, detail="Chapter not found")
+
+    # Check user progress
+    progress = await db.user_progress.find_one(
+        {"user_id": current_user["id"], "chapter_id": str(chapter_number)}, {"_id": 0}
+    )
+    is_completed = progress["is_completed"] if progress else False
+
+    return {
+        "chapter_number": chapter["chapter_number"],
+        "title": chapter["title"],
+        "description": chapter["description"],
+        "content": (
+            f"Welcome to Chapter {chapter_number}: {chapter['title']}.\n\n"
+            f"{chapter['description']}.\n\n"
+            "This chapter covers everything you need to know about this important aspect of home construction. "
+            "As an Indian homeowner, understanding these concepts will help you make better decisions, save money, "
+            "and ensure your dream home is built exactly the way you want it.\n\n"
+            "Key Topics Covered:\n"
+            "- Understanding the fundamentals and best practices\n"
+            "- Common mistakes to avoid and how to prevent them\n"
+            "- Expert tips from experienced builders and architects\n"
+            "- Cost-saving strategies without compromising quality\n"
+            "- Checklist of action items for this stage\n\n"
+            "Detailed content for this chapter will be available soon. "
+            "In the meantime, use the checklist and budget tools to stay on track with your home building journey."
+        ),
+        "is_completed": is_completed,
+    }
+
+
+@api_router.post("/guide/chapters/{chapter_number}/complete")
+async def mark_chapter_complete(chapter_number: int, current_user: dict = Depends(get_current_user)):
+    # Validate chapter exists
+    chapter = next((ch for ch in CHAPTERS if ch["chapter_number"] == chapter_number), None)
+    if not chapter:
+        raise HTTPException(status_code=404, detail="Chapter not found")
+
+    user_id = current_user["id"]
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Upsert progress
+    await db.user_progress.update_one(
+        {"user_id": user_id, "chapter_id": str(chapter_number)},
+        {"$set": {"is_completed": True, "updated_at": now}},
+        upsert=True,
+    )
+
+    # Get updated count
+    completed_count = await db.user_progress.count_documents({"user_id": user_id, "is_completed": True})
+
+    return {
+        "success": True,
+        "chapter_number": chapter_number,
+        "message": f"Chapter {chapter_number} marked as complete",
+        "completed_count": completed_count,
+        "total_chapters": TOTAL_CHAPTERS,
+    }
 
 
 # ─── Health Check ────────────────────────────────────────────────────────────
