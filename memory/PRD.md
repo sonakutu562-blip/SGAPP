@@ -39,7 +39,8 @@ Build "Sundar Ghar Saathi" - a paid learning and tools platform for Indian homeo
 - [x] **My Guide - Chapter Detail Page**: Chapter header, content, Mark as Complete button, Back to Guide
 - [x] **Checklists Page**: 3 categories (Site Visit 15, Material Quality 12, Legal Documents 10 = 37 items), orange checkbox toggle with strikethrough, collapsible sections, progress tracking
 - [x] **Budget Tracker Page**: Total budget input, 8 category cards with editable budgets, Add Expense dialog, expense history, Indian Rupee formatting, under/over budget color coding
-- [x] Dashboard cards auto-update from checklists and budget data
+- [x] **Progress Tracker Page**: 10-stage vertical timeline with completed/current/upcoming status, "Set as Current Stage" buttons, linked guide chapters, pulsing current indicator, confetti celebration on Stage 10 completion
+- [x] Dashboard Construction Stage card shows current stage name
 
 ## Prioritized Backlog
 
