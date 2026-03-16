@@ -764,8 +764,100 @@ class SundarGharAPITester:
             return True
         return False
 
+    def test_get_library(self):
+        """Test GET /library - should return 6 products with main_guide unlocked"""
+        success, response = self.run_test(
+            "Get Library Products",
+            "GET",
+            "/library",
+            200,
+            auth_required=True
+        )
+        if success:
+            required_fields = ['products', 'unlocked_count', 'total_count']
+            if not all(field in response for field in required_fields):
+                print(f"❌ Missing fields in library response")
+                return False
+            
+            products = response.get('products', [])
+            unlocked_count = response.get('unlocked_count', 0)
+            total_count = response.get('total_count', 0)
+            
+            print(f"   ✓ Total products: {total_count}")
+            print(f"   ✓ Unlocked count: {unlocked_count}")
+            print(f"   ✓ Products returned: {len(products)}")
+            
+            # Should have exactly 6 products
+            if len(products) != 6:
+                print(f"❌ Expected 6 products, got {len(products)}")
+                return False
+                
+            if total_count != 6:
+                print(f"❌ Expected total_count=6, got {total_count}")
+                return False
+            
+            # Main guide should be unlocked by default (unlocked_count should be 1)
+            if unlocked_count != 1:
+                print(f"❌ Expected 1 unlocked product (main_guide), got {unlocked_count}")
+                return False
+            
+            # Verify product structure and expected prices
+            expected_prices = {
+                "main_guide": 499,
+                "cost_calculator": 249,
+                "vaastu_guide": 297,
+                "maintenance_guide": 199,
+                "luxury_decor_guide": 388,
+                "tiles_guide": 455
+            }
+            
+            unlocked_products = []
+            locked_products = []
+            
+            for product in products:
+                # Check required fields
+                product_fields = ['product_key', 'name', 'description', 'price', 'icon', 
+                                'action_unlocked', 'action_label', 'is_unlocked']
+                if not all(field in product for field in product_fields):
+                    print(f"❌ Product {product.get('product_key')} missing required fields")
+                    return False
+                
+                product_key = product.get('product_key')
+                price = product.get('price')
+                is_unlocked = product.get('is_unlocked', False)
+                
+                # Check price matches expected
+                expected_price = expected_prices.get(product_key)
+                if expected_price and price != expected_price:
+                    print(f"❌ Product {product_key}: expected price ₹{expected_price}, got ₹{price}")
+                    return False
+                
+                if is_unlocked:
+                    unlocked_products.append(product_key)
+                else:
+                    locked_products.append(product_key)
+                    
+                print(f"   ✓ {product.get('name')}: ₹{price} ({'Unlocked' if is_unlocked else 'Locked'})")
+            
+            # Only main_guide should be unlocked
+            if unlocked_products != ["main_guide"]:
+                print(f"❌ Expected only main_guide to be unlocked, got: {unlocked_products}")
+                return False
+            
+            # Other 5 should be locked
+            expected_locked = ["cost_calculator", "vaastu_guide", "maintenance_guide", "luxury_decor_guide", "tiles_guide"]
+            if set(locked_products) != set(expected_locked):
+                print(f"❌ Expected locked products: {expected_locked}, got: {locked_products}")
+                return False
+            
+            print(f"   ✅ Main guide is unlocked, 5 others are locked correctly")
+            print(f"   ✅ All prices match expected values")
+            
+            return True
+        return False
+
 def main():
-    print("🧪 Progress Tracker Module Testing - Backend APIs")
+    print("🧪 Library Module Testing - Backend APIs")
     print("=" * 60)
     
     tester = SundarGharAPITester()
@@ -787,16 +879,12 @@ def main():
         print("❌ Authentication failed - cannot proceed with module tests")
         return 1
     
-    print("\n=== PROGRESS TRACKER MODULE TESTS ===")
-    progress_tests = [
-        tester.test_get_progress,
-        tester.test_set_stage_valid,
-        tester.test_set_stage_invalid_low,
-        tester.test_set_stage_invalid_high,
-        tester.test_set_stage_reset_to_4,
+    print("\n=== LIBRARY MODULE TESTS ===")
+    library_tests = [
+        tester.test_get_library,
     ]
 
-    for test_func in progress_tests:
+    for test_func in library_tests:
         try:
             test_func()
         except Exception as e:

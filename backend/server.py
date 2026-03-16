@@ -741,6 +741,104 @@ async def set_current_stage(data: SetStage, current_user: dict = Depends(get_cur
     }
 
 
+# ─── Library Routes ──────────────────────────────────────────────────────────
+
+LIBRARY_PRODUCTS = [
+    {
+        "product_key": "main_guide",
+        "name": "Sundar Ghar Construction Guide",
+        "description": "Complete 22-chapter guide to build your dream home",
+        "price": 499,
+        "icon": "book",
+        "action_unlocked": "read_guide",
+        "action_label": "Read Guide",
+    },
+    {
+        "product_key": "cost_calculator",
+        "name": "Construction Cost Calculator",
+        "description": "Calculate exact costs for cement, steel, labour & materials",
+        "price": 249,
+        "icon": "calculator",
+        "action_unlocked": "external_link",
+        "action_label": "Open Calculator",
+    },
+    {
+        "product_key": "vaastu_guide",
+        "name": "Vaastu Decor Tips Guide",
+        "description": "Attract positive energy with powerful Vaastu-inspired decor tips",
+        "price": 297,
+        "icon": "home",
+        "action_unlocked": "view_pdf",
+        "action_label": "View PDF",
+    },
+    {
+        "product_key": "maintenance_guide",
+        "name": "Home Maintenance & Aftercare Bible",
+        "description": "Keep your dream home fresh, flawless and beautiful forever",
+        "price": 199,
+        "icon": "wrench",
+        "action_unlocked": "view_pdf",
+        "action_label": "View PDF",
+    },
+    {
+        "product_key": "luxury_decor_guide",
+        "name": "Luxury Home Decor Guide",
+        "description": "Transform your home into a luxurious, money-attracting space",
+        "price": 388,
+        "icon": "sparkles",
+        "action_unlocked": "view_pdf",
+        "action_label": "View PDF",
+    },
+    {
+        "product_key": "tiles_guide",
+        "name": "Tiles & Wall Paint Mistakes Guide",
+        "description": "Insider secrets to picking perfect tiles and wall colours",
+        "price": 455,
+        "icon": "palette",
+        "action_unlocked": "view_pdf",
+        "action_label": "View PDF",
+    },
+]
+
+
+@api_router.get("/library")
+async def get_library(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+
+    # Get user's unlocked products (default: main_guide)
+    user_prods = await db.user_products.find_one({"user_id": user_id}, {"_id": 0})
+    if not user_prods:
+        # Initialize default product access
+        await db.user_products.insert_one({
+            "user_id": user_id,
+            "product_keys": ["main_guide"],
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        })
+        unlocked_keys = {"main_guide"}
+    else:
+        unlocked_keys = set(user_prods.get("product_keys", ["main_guide"]))
+
+    products = []
+    for p in LIBRARY_PRODUCTS:
+        is_unlocked = p["product_key"] in unlocked_keys
+        products.append({
+            "product_key": p["product_key"],
+            "name": p["name"],
+            "description": p["description"],
+            "price": p["price"],
+            "icon": p["icon"],
+            "action_unlocked": p["action_unlocked"],
+            "action_label": p["action_label"],
+            "is_unlocked": is_unlocked,
+        })
+
+    return {
+        "products": products,
+        "unlocked_count": len(unlocked_keys),
+        "total_count": len(LIBRARY_PRODUCTS),
+    }
+
+
 # ─── Health Check ────────────────────────────────────────────────────────────
 
 @api_router.get("/")
