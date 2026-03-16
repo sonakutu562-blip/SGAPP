@@ -155,6 +155,83 @@ CHAPTERS = [
 TOTAL_CHAPTERS = len(CHAPTERS)
 
 
+# ─── Checklist Data ───────────────────────────────────────────────────────────
+
+CHECKLIST_DATA = [
+    {
+        "type": "site_visit",
+        "title": "Site Visit Checklist",
+        "items": [
+            {"key": "site_1", "text": "Check soil quality before foundation work"},
+            {"key": "site_2", "text": "Verify land title and ownership documents"},
+            {"key": "site_3", "text": "Get building plan sanctioned from municipality"},
+            {"key": "site_4", "text": "Photograph the site before work begins"},
+            {"key": "site_5", "text": "Check neighbouring plot boundaries clearly"},
+            {"key": "site_6", "text": "Verify water and electricity connection points"},
+            {"key": "site_7", "text": "Check road access for material delivery"},
+            {"key": "site_8", "text": "Inspect drainage and water flow direction"},
+            {"key": "site_9", "text": "Confirm no legal disputes on the land"},
+            {"key": "site_10", "text": "Check sunlight direction for room planning"},
+            {"key": "site_11", "text": "Verify setback rules for your plot area"},
+            {"key": "site_12", "text": "Meet neighbours before construction starts"},
+            {"key": "site_13", "text": "Check underground water table depth"},
+            {"key": "site_14", "text": "Verify phone and internet cable locations"},
+            {"key": "site_15", "text": "Note any trees that need to be removed"},
+        ],
+    },
+    {
+        "type": "material_quality",
+        "title": "Material Quality Checklist",
+        "items": [
+            {"key": "mat_1", "text": "Verify cement brand, grade and expiry date"},
+            {"key": "mat_2", "text": "Check steel rebar diameter and quality"},
+            {"key": "mat_3", "text": "Test bricks by tapping — should ring clearly"},
+            {"key": "mat_4", "text": "Verify sand quality — no mud or clay mixed"},
+            {"key": "mat_5", "text": "Check aggregate (stone chips) size and grade"},
+            {"key": "mat_6", "text": "Verify tiles are ISI marked"},
+            {"key": "mat_7", "text": "Check electrical wire gauge and brand"},
+            {"key": "mat_8", "text": "Verify plumbing pipe quality and brand"},
+            {"key": "mat_9", "text": "Check paint brand and batch number"},
+            {"key": "mat_10", "text": "Verify waterproofing material quality"},
+            {"key": "mat_11", "text": "Check wood treatment for termites"},
+            {"key": "mat_12", "text": "Verify window glass thickness"},
+        ],
+    },
+    {
+        "type": "legal_documents",
+        "title": "Legal Documents Checklist",
+        "items": [
+            {"key": "legal_1", "text": "Land title deed in your name"},
+            {"key": "legal_2", "text": "Encumbrance certificate obtained"},
+            {"key": "legal_3", "text": "Building plan approved by authority"},
+            {"key": "legal_4", "text": "Construction agreement registered"},
+            {"key": "legal_5", "text": "Contractor agreement signed and stamped"},
+            {"key": "legal_6", "text": "All payment receipts saved safely"},
+            {"key": "legal_7", "text": "Labour contract documents ready"},
+            {"key": "legal_8", "text": "Property tax receipts up to date"},
+            {"key": "legal_9", "text": "NOC from neighbours if required"},
+            {"key": "legal_10", "text": "Insurance for construction site taken"},
+        ],
+    },
+]
+
+TOTAL_CHECKLIST_ITEMS = sum(len(cat["items"]) for cat in CHECKLIST_DATA)
+
+
+# ─── Budget Categories ────────────────────────────────────────────────────────
+
+BUDGET_CATEGORIES = [
+    {"key": "foundation", "name": "Foundation & Structure", "icon": "building"},
+    {"key": "bricks_cement", "name": "Bricks, Cement & Sand", "icon": "bricks"},
+    {"key": "steel_roofing", "name": "Steel & Roofing", "icon": "roof"},
+    {"key": "labour", "name": "Labour Charges", "icon": "worker"},
+    {"key": "plumbing_electrical", "name": "Plumbing & Electrical", "icon": "tools"},
+    {"key": "doors_windows", "name": "Doors, Windows & Flooring", "icon": "door"},
+    {"key": "interior", "name": "Interior & Finishing", "icon": "paint"},
+    {"key": "miscellaneous", "name": "Miscellaneous & Buffer", "icon": "wallet"},
+]
+
+
 @app.on_event("startup")
 async def startup_event():
     # Create indexes
@@ -246,14 +323,14 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
     reading_progress = int((completed / total_chapters) * 100) if total_chapters > 0 else 0
 
     # Checklist progress
-    total_items = await db.checklist_items.count_documents({"user_id": user_id})
     checked_items = await db.checklist_items.count_documents({"user_id": user_id, "is_checked": True})
-    checklist_progress = int((checked_items / total_items) * 100) if total_items > 0 else 0
+    checklist_progress = int((checked_items / TOTAL_CHECKLIST_ITEMS) * 100)
 
     # Budget usage
-    entries = await db.budget_entries.find({"user_id": user_id}, {"_id": 0}).to_list(100)
-    total_budgeted = sum(e.get("budgeted_amount", 0) for e in entries)
-    total_spent = sum(e.get("spent_amount", 0) for e in entries)
+    b_settings = await db.budget_settings.find_one({"user_id": user_id}, {"_id": 0})
+    total_budgeted = b_settings.get("total_budget", 0) if b_settings else 0
+    b_expenses = await db.budget_expenses.find({"user_id": user_id}, {"_id": 0}).to_list(1000)
+    total_spent = sum(e.get("amount", 0) for e in b_expenses)
     budget_used = int((total_spent / total_budgeted) * 100) if total_budgeted > 0 else 0
 
     # Construction stage
@@ -392,6 +469,164 @@ async def unmark_chapter_complete(chapter_number: int, current_user: dict = Depe
         "completed_count": completed_count,
         "total_chapters": TOTAL_CHAPTERS,
     }
+
+
+# ─── Checklist Routes ─────────────────────────────────────────────────────────
+
+@api_router.get("/checklists")
+async def get_checklists(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    checked_docs = await db.checklist_items.find(
+        {"user_id": user_id, "is_checked": True}, {"_id": 0}
+    ).to_list(200)
+    checked_keys = {doc["item_key"] for doc in checked_docs}
+
+    categories = []
+    for cat in CHECKLIST_DATA:
+        cat_checked = sum(1 for item in cat["items"] if item["key"] in checked_keys)
+        items = [{**item, "is_checked": item["key"] in checked_keys} for item in cat["items"]]
+        categories.append({
+            "type": cat["type"],
+            "title": cat["title"],
+            "total_items": len(cat["items"]),
+            "checked_count": cat_checked,
+            "items": items,
+        })
+
+    return {
+        "total_items": TOTAL_CHECKLIST_ITEMS,
+        "total_checked": len(checked_keys),
+        "categories": categories,
+    }
+
+
+class ChecklistToggle(BaseModel):
+    checklist_type: str
+    item_key: str
+
+
+@api_router.post("/checklists/toggle")
+async def toggle_checklist_item(data: ChecklistToggle, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    now = datetime.now(timezone.utc).isoformat()
+
+    existing = await db.checklist_items.find_one(
+        {"user_id": user_id, "item_key": data.item_key}, {"_id": 0}
+    )
+
+    if existing and existing.get("is_checked"):
+        await db.checklist_items.update_one(
+            {"user_id": user_id, "item_key": data.item_key},
+            {"$set": {"is_checked": False, "updated_at": now}},
+        )
+        is_checked = False
+    else:
+        await db.checklist_items.update_one(
+            {"user_id": user_id, "item_key": data.item_key},
+            {"$set": {"checklist_type": data.checklist_type, "is_checked": True, "updated_at": now}},
+            upsert=True,
+        )
+        is_checked = True
+
+    total_checked = await db.checklist_items.count_documents({"user_id": user_id, "is_checked": True})
+
+    return {
+        "item_key": data.item_key,
+        "is_checked": is_checked,
+        "total_checked": total_checked,
+        "total_items": TOTAL_CHECKLIST_ITEMS,
+    }
+
+
+# ─── Budget Routes ────────────────────────────────────────────────────────────
+
+class BudgetTotal(BaseModel):
+    total_budget: float
+
+class CategoryBudget(BaseModel):
+    category: str
+    budgeted_amount: float
+
+class ExpenseCreate(BaseModel):
+    category: str
+    amount: float
+    note: str = ""
+    date: str = ""
+
+
+@api_router.get("/budget")
+async def get_budget(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    settings = await db.budget_settings.find_one({"user_id": user_id}, {"_id": 0})
+    total_budget = settings.get("total_budget", 0) if settings else 0
+    category_budgets = settings.get("category_budgets", {}) if settings else {}
+
+    expenses = await db.budget_expenses.find({"user_id": user_id}, {"_id": 0}).to_list(1000)
+    spent_by_cat = {}
+    for exp in expenses:
+        spent_by_cat[exp["category"]] = spent_by_cat.get(exp["category"], 0) + exp["amount"]
+    total_spent = sum(spent_by_cat.values())
+
+    categories = []
+    for cat in BUDGET_CATEGORIES:
+        categories.append({
+            "key": cat["key"],
+            "name": cat["name"],
+            "icon": cat["icon"],
+            "budgeted_amount": category_budgets.get(cat["key"], 0),
+            "spent_amount": spent_by_cat.get(cat["key"], 0),
+        })
+
+    recent = await db.budget_expenses.find(
+        {"user_id": user_id}, {"_id": 0}
+    ).sort("created_at", -1).to_list(10)
+
+    return {
+        "total_budget": total_budget,
+        "total_spent": total_spent,
+        "remaining": total_budget - total_spent,
+        "categories": categories,
+        "recent_expenses": recent,
+    }
+
+
+@api_router.post("/budget/total")
+async def set_budget_total(data: BudgetTotal, current_user: dict = Depends(get_current_user)):
+    now = datetime.now(timezone.utc).isoformat()
+    await db.budget_settings.update_one(
+        {"user_id": current_user["id"]},
+        {"$set": {"total_budget": data.total_budget, "updated_at": now}},
+        upsert=True,
+    )
+    return {"success": True, "total_budget": data.total_budget}
+
+
+@api_router.post("/budget/category")
+async def set_category_budget(data: CategoryBudget, current_user: dict = Depends(get_current_user)):
+    now = datetime.now(timezone.utc).isoformat()
+    await db.budget_settings.update_one(
+        {"user_id": current_user["id"]},
+        {"$set": {f"category_budgets.{data.category}": data.budgeted_amount, "updated_at": now}},
+        upsert=True,
+    )
+    return {"success": True, "category": data.category, "budgeted_amount": data.budgeted_amount}
+
+
+@api_router.post("/budget/expense")
+async def add_expense(data: ExpenseCreate, current_user: dict = Depends(get_current_user)):
+    now = datetime.now(timezone.utc).isoformat()
+    expense_date = data.date if data.date else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    expense_doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": current_user["id"],
+        "category": data.category,
+        "amount": data.amount,
+        "note": data.note,
+        "date": expense_date,
+        "created_at": now,
+    }
+    await db.budget_expenses.insert_one(expense_doc)
+    return {"success": True, "expense": {k: v for k, v in expense_doc.items() if k != "_id"}}
 
 
 # ─── Health Check ────────────────────────────────────────────────────────────

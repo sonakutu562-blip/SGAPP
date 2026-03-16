@@ -412,14 +412,224 @@ class SundarGharAPITester:
         
         return success
 
+    def test_get_checklists(self):
+        """Test GET /checklists - should return 3 categories with 37 total items"""
+        success, response = self.run_test(
+            "Get Checklists",
+            "GET",
+            "/checklists",
+            200,
+            auth_required=True
+        )
+        if success:
+            # Verify structure
+            required_fields = ['total_items', 'total_checked', 'categories']
+            if not all(field in response for field in required_fields):
+                print(f"❌ Missing fields in checklists response")
+                return False
+            
+            total_items = response.get('total_items', 0)
+            total_checked = response.get('total_checked', 0)
+            categories = response.get('categories', [])
+            
+            print(f"   ✓ Total items: {total_items}")
+            print(f"   ✓ Total checked: {total_checked}")
+            print(f"   ✓ Categories count: {len(categories)}")
+            
+            # Should have exactly 37 total items and 3 categories
+            if total_items != 37:
+                print(f"❌ Expected 37 total items, got {total_items}")
+                return False
+                
+            if len(categories) != 3:
+                print(f"❌ Expected 3 categories, got {len(categories)}")
+                return False
+            
+            # Verify category structure and item counts
+            expected_counts = {"site_visit": 15, "material_quality": 12, "legal_documents": 10}
+            for cat in categories:
+                cat_type = cat.get('type')
+                total_cat_items = cat.get('total_items', 0)
+                expected_count = expected_counts.get(cat_type, 0)
+                
+                if total_cat_items != expected_count:
+                    print(f"❌ Category {cat_type}: expected {expected_count} items, got {total_cat_items}")
+                    return False
+                
+                print(f"   ✓ {cat.get('title', cat_type)}: {cat.get('checked_count', 0)}/{total_cat_items} items")
+            
+            return True
+        return False
+
+    def test_checklist_toggle(self):
+        """Test POST /checklists/toggle - toggle item checked state"""
+        # Test toggling a specific item
+        success, response = self.run_test(
+            "Toggle Checklist Item",
+            "POST",
+            "/checklists/toggle",
+            200,
+            data={
+                "checklist_type": "site_visit", 
+                "item_key": "site_2"
+            },
+            auth_required=True
+        )
+        if success:
+            required_fields = ['item_key', 'is_checked', 'total_checked', 'total_items']
+            if not all(field in response for field in required_fields):
+                print(f"❌ Missing fields in toggle response")
+                return False
+                
+            print(f"   ✓ Item {response.get('item_key')} is_checked: {response.get('is_checked')}")
+            print(f"   ✓ Total checked: {response.get('total_checked')}/{response.get('total_items')}")
+            return True
+        return False
+
+    def test_get_budget(self):
+        """Test GET /budget - should return budget summary with 8 categories"""
+        success, response = self.run_test(
+            "Get Budget Summary",
+            "GET",
+            "/budget",
+            200,
+            auth_required=True
+        )
+        if success:
+            required_fields = ['total_budget', 'total_spent', 'remaining', 'categories', 'recent_expenses']
+            if not all(field in response for field in required_fields):
+                print(f"❌ Missing fields in budget response")
+                return False
+            
+            categories = response.get('categories', [])
+            print(f"   ✓ Total budget: ₹{response.get('total_budget', 0)}")
+            print(f"   ✓ Total spent: ₹{response.get('total_spent', 0)}")
+            print(f"   ✓ Remaining: ₹{response.get('remaining', 0)}")
+            print(f"   ✓ Categories count: {len(categories)}")
+            print(f"   ✓ Recent expenses: {len(response.get('recent_expenses', []))}")
+            
+            # Should have exactly 8 budget categories
+            if len(categories) != 8:
+                print(f"❌ Expected 8 budget categories, got {len(categories)}")
+                return False
+                
+            # Verify category structure
+            expected_keys = ["foundation", "bricks_cement", "steel_roofing", "labour", 
+                           "plumbing_electrical", "doors_windows", "interior", "miscellaneous"]
+            
+            category_keys = [cat.get('key') for cat in categories]
+            for expected_key in expected_keys:
+                if expected_key not in category_keys:
+                    print(f"❌ Missing expected category: {expected_key}")
+                    return False
+            
+            for cat in categories:
+                cat_fields = ['key', 'name', 'icon', 'budgeted_amount', 'spent_amount']
+                if not all(field in cat for field in cat_fields):
+                    print(f"❌ Category {cat.get('key')} missing required fields")
+                    return False
+            
+            return True
+        return False
+
+    def test_set_budget_total(self):
+        """Test POST /budget/total - set total budget"""
+        test_budget = 3000000  # 30 lakh
+        success, response = self.run_test(
+            "Set Total Budget",
+            "POST", 
+            "/budget/total",
+            200,
+            data={"total_budget": test_budget},
+            auth_required=True
+        )
+        if success:
+            if not all(field in response for field in ['success', 'total_budget']):
+                print(f"❌ Missing fields in budget total response")
+                return False
+            
+            if response.get('total_budget') != test_budget:
+                print(f"❌ Budget not set correctly. Expected {test_budget}, got {response.get('total_budget')}")
+                return False
+                
+            print(f"   ✓ Total budget set to: ₹{response.get('total_budget')}")
+            return True
+        return False
+
+    def test_set_category_budget(self):
+        """Test POST /budget/category - set category budget"""
+        test_amount = 500000  # 5 lakh for foundation
+        success, response = self.run_test(
+            "Set Category Budget",
+            "POST",
+            "/budget/category", 
+            200,
+            data={
+                "category": "foundation",
+                "budgeted_amount": test_amount
+            },
+            auth_required=True
+        )
+        if success:
+            required_fields = ['success', 'category', 'budgeted_amount']
+            if not all(field in response for field in required_fields):
+                print(f"❌ Missing fields in category budget response")
+                return False
+                
+            if response.get('budgeted_amount') != test_amount:
+                print(f"❌ Category budget not set correctly")
+                return False
+                
+            print(f"   ✓ Category {response.get('category')} budget set to: ₹{response.get('budgeted_amount')}")
+            return True
+        return False
+
+    def test_add_expense(self):
+        """Test POST /budget/expense - add expense entry"""
+        test_expense = {
+            "category": "foundation",
+            "amount": 75000,
+            "note": "Test cement purchase",
+            "date": "2024-12-01"
+        }
+        success, response = self.run_test(
+            "Add Budget Expense",
+            "POST",
+            "/budget/expense",
+            200,
+            data=test_expense,
+            auth_required=True
+        )
+        if success:
+            if not response.get('success', False):
+                print(f"❌ Add expense did not return success")
+                return False
+                
+            expense = response.get('expense', {})
+            if not expense:
+                print(f"❌ No expense data returned")
+                return False
+            
+            # Verify expense fields
+            required_fields = ['id', 'user_id', 'category', 'amount', 'note', 'date', 'created_at']
+            if not all(field in expense for field in required_fields):
+                print(f"❌ Missing fields in expense response")
+                return False
+            
+            print(f"   ✓ Expense added: ₹{expense.get('amount')} for {expense.get('category')}")
+            print(f"   ✓ Note: {expense.get('note')}")
+            print(f"   ✓ Date: {expense.get('date')}")
+            return True
+        return False
+
 def main():
-    print("🧪 Chapter Detail Fix Testing - Backend APIs")
+    print("🧪 Checklists and Budget Modules Testing - Backend APIs")
     print("=" * 60)
     
     tester = SundarGharAPITester()
     
-    # First login with existing test user (focus on chapter functionality)
-    print("\n=== AUTHENTICATION TEST (EXISTING USER) ===")
+    # Login with test user
+    print("\n=== AUTHENTICATION TEST ===")
     success, response = tester.run_test(
         "Login with test user",
         "POST", 
@@ -432,18 +642,26 @@ def main():
         tester.token = response['token']
         print("✅ Authentication successful")
     else:
-        print("❌ Authentication failed - cannot proceed with chapter tests")
+        print("❌ Authentication failed - cannot proceed with module tests")
         return 1
     
-    # Test the specific chapter detail functionality
-    chapter_tests = [
-        tester.test_chapter_uncomplete_functionality,
-        tester.test_guide_list_data_structure,
-        tester.test_get_chapter_detail,  # existing test
-        tester.test_mark_chapter_complete,  # existing test
+    print("\n=== CHECKLIST MODULE TESTS ===")
+    checklist_tests = [
+        tester.test_get_checklists,
+        tester.test_checklist_toggle,
+    ]
+    
+    print("\n=== BUDGET MODULE TESTS ===")
+    budget_tests = [
+        tester.test_get_budget,
+        tester.test_set_budget_total,
+        tester.test_set_category_budget,
+        tester.test_add_expense,
     ]
 
-    for test_func in chapter_tests:
+    all_tests = checklist_tests + budget_tests
+    
+    for test_func in all_tests:
         try:
             test_func()
         except Exception as e:

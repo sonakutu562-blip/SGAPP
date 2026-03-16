@@ -8,6 +8,8 @@ import DashboardLayout from "@/layouts/DashboardLayout";
 import DashboardHome from "@/pages/DashboardHome";
 import GuideListPage from "@/pages/GuideListPage";
 import ChapterDetailPage from "@/pages/ChapterDetailPage";
+import ChecklistsPage from "@/pages/ChecklistsPage";
+import BudgetTrackerPage from "@/pages/BudgetTrackerPage";
 import "@/App.css";
 
 function ProtectedRoute({ children }) {
@@ -59,8 +61,8 @@ function App() {
             <Route index element={<DashboardHome />} />
             <Route path="guide" element={<GuideListPage />} />
             <Route path="guide/:chapterNumber" element={<ChapterDetailPage />} />
-            <Route path="checklists" element={<PlaceholderPage title="Checklists" />} />
-            <Route path="budget" element={<PlaceholderPage title="Budget Tracker" />} />
+            <Route path="checklists" element={<ChecklistsPage />} />
+            <Route path="budget" element={<BudgetTrackerPage />} />
             <Route path="progress" element={<PlaceholderPage title="Progress Tracker" />} />
             <Route path="library" element={<PlaceholderPage title="My Library" />} />
             <Route path="ai" element={<PlaceholderPage title="AI Assistant" />} />
