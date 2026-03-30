@@ -9,17 +9,22 @@ Build "Sundar Ghar Saathi" - a paid learning and tools platform for Indian homeo
 - **Database**: MongoDB
 - **Auth**: JWT with bcrypt password hashing
 - **Payments**: Razorpay (live keys configured)
+- **AI**: Gemini 3 Flash via Emergent LLM key (emergentintegrations library)
 
 ## What's Been Implemented
 
+### AI Assistant Module (Complete - 2026-03-30)
+- [x] `POST /api/chat/send` — Sends user message to Gemini 3 Flash, returns AI response, saves to MongoDB
+- [x] `GET /api/chat/history` — Returns last 10 messages for the user
+- [x] `DELETE /api/chat/clear` — Clears chat history and resets AI context
+- [x] `/dashboard/ai` page — Full chat UI with welcome message, 4 suggestion chips, typing indicator, user/bot message bubbles, character counter
+- [x] System prompt enforces construction-only answers, Hinglish support, Indian context
+- [x] Error handling: Shows friendly Hindi error message if AI fails
+
 ### Razorpay Payment Integration (Complete)
-- [x] `POST /api/payments/create-order` — Creates Razorpay order for any of the 6 products
-- [x] `POST /api/payments/verify` — Verifies payment signature, saves purchase to MongoDB `purchases` collection, unlocks product in `user_products`, auto-creates user if new
-- [x] `POST /api/webhook/razorpay` — Handles `payment.captured` (unlock product) and `payment.failed` (log failure) with signature verification
-- [x] `/buy` page (public) — Product details, user form, security badges, money-back guarantee, Razorpay popup
-- [x] Library page "Unlock for ₹XXX" buttons — Opens Razorpay popup, on success refreshes to show "Unlocked" badge (no page refresh)
-- [x] Payment failure handling — Error toast with support email
-- [x] Failed payments logged to `purchases` collection
+- [x] `POST /api/payments/create-order`, `POST /api/payments/verify`, `POST /api/webhook/razorpay`
+- [x] `/buy` page (public) with Razorpay popup
+- [x] Library "Unlock for ₹XXX" buttons with instant unlock on payment success
 
 ### Product Prices
 | Product | Price |
@@ -34,14 +39,16 @@ Build "Sundar Ghar Saathi" - a paid learning and tools platform for Indian homeo
 ### Other Modules (All Complete)
 - [x] JWT Auth (signup/login)
 - [x] Dashboard with summary cards
-- [x] My Guide (22 chapters, progress tracking, complete/incomplete toggle)
+- [x] My Guide (22 chapters, progress tracking)
 - [x] Checklists (3 categories, 37 items)
 - [x] Budget Tracker (8 categories + custom)
 - [x] Progress Tracker (10-stage timeline)
 - [x] My Library (6 products, locked/unlocked)
 
-## Important Note
-- **Razorpay domain whitelist**: The preview domain must be added in Razorpay Dashboard → Settings → Website and App Details for payments to succeed. Without this, Razorpay blocks payments with "website does not match" error.
+## Key DB Collections
+- **users**, **products**, **user_products**, **purchases**
+- **user_progress**, **checklist_items**, **budget_settings**, **budget_expenses**
+- **construction_stage**, **chat_history**
 
 ## Prioritized Backlog
 
@@ -51,10 +58,9 @@ Build "Sundar Ghar Saathi" - a paid learning and tools platform for Indian homeo
 - [ ] "Download PDF" in My Guide linked to actual file
 
 ### P2
-- [ ] AI Assistant (LLM chat)
-- [ ] Settings page (profile, password)
+- [ ] Settings page (profile edit, password change)
 - [ ] Hindi language support
-- [ ] Admin panel
+- [ ] Admin panel with "Unlock All Products"
 
 ## Design System
 - Primary: #1B3A6B (deep blue)
