@@ -54,6 +54,8 @@ PRODUCT_PRICES = {
     "tiles_guide": 499,
 }
 
+ADMIN_EMAIL = "sonakutu562@gmail.com"
+
 # App and Router
 app = FastAPI(title="Sundar Ghar Saathi API")
 api_router = APIRouter(prefix="/api")
@@ -85,6 +87,7 @@ class UserResponse(BaseModel):
     phone: str
     is_active: bool
     created_at: str
+    role: str = "user"
 
 class TokenResponse(BaseModel):
     token: str
@@ -274,14 +277,17 @@ TOTAL_STAGES = len(CONSTRUCTION_STAGES)
 
 @app.on_event("startup")
 async def startup_event():
-    # Create indexes
     await db.users.create_index("email", unique=True)
     await db.users.create_index("id", unique=True)
-    # Seed products if empty
     count = await db.products.count_documents({})
     if count == 0:
         await db.products.insert_many(SEED_PRODUCTS)
         logger.info("Seeded %d products", len(SEED_PRODUCTS))
+    # Ensure admin role
+    await db.users.update_many(
+        {"email": ADMIN_EMAIL},
+        {"$set": {"role": "admin"}},
+    )
     logger.info("Sundar Ghar Saathi API started successfully")
 
 
@@ -308,14 +314,16 @@ async def signup(data: UserCreate):
         "password_hash": hash_password(data.password),
         "phone": data.phone,
         "is_active": True,
-        "created_at": now
+        "created_at": now,
+        "role": "admin" if data.email == ADMIN_EMAIL else "user",
     }
     await db.users.insert_one(user_doc)
 
     token = create_token(user_id)
     user_resp = UserResponse(
         id=user_id, name=data.name, email=data.email,
-        phone=data.phone, is_active=True, created_at=now
+        phone=data.phone, is_active=True, created_at=now,
+        role=user_doc["role"]
     )
     return TokenResponse(token=token, user=user_resp)
 
@@ -329,7 +337,8 @@ async def login(data: UserLogin):
     token = create_token(user["id"])
     user_resp = UserResponse(
         id=user["id"], name=user["name"], email=user["email"],
-        phone=user["phone"], is_active=user["is_active"], created_at=user["created_at"]
+        phone=user["phone"], is_active=user["is_active"], created_at=user["created_at"],
+        role=user.get("role", "user")
     )
     return TokenResponse(token=token, user=user_resp)
 
@@ -339,7 +348,7 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     return UserResponse(
         id=current_user["id"], name=current_user["name"], email=current_user["email"],
         phone=current_user["phone"], is_active=current_user["is_active"],
-        created_at=current_user["created_at"]
+        created_at=current_user["created_at"], role=current_user.get("role", "user")
     )
 
 
@@ -438,11 +447,16 @@ async def get_chapter_detail(chapter_number: int, current_user: dict = Depends(g
     )
     is_completed = progress["is_completed"] if progress else False
 
-    return {
-        "chapter_number": chapter["chapter_number"],
-        "title": chapter["title"],
-        "description": chapter["description"],
-        "content": (
+    # Check for custom content from admin
+    content_doc = await db.chapter_content.find_one(
+        {"chapter_number": chapter_number}, {"_id": 0}
+    )
+    custom_content = content_doc.get("content", "") if content_doc else ""
+
+    if custom_content:
+        content = custom_content
+    else:
+        content = (
             f"Welcome to Chapter {chapter_number}: {chapter['title']}.\n\n"
             f"{chapter['description']}.\n\n"
             "This chapter covers everything you need to know about this important aspect of home construction. "
@@ -456,7 +470,13 @@ async def get_chapter_detail(chapter_number: int, current_user: dict = Depends(g
             "- Checklist of action items for this stage\n\n"
             "Detailed content for this chapter will be available soon. "
             "In the meantime, use the checklist and budget tools to stay on track with your home building journey."
-        ),
+        )
+
+    return {
+        "chapter_number": chapter["chapter_number"],
+        "title": chapter["title"],
+        "description": chapter["description"],
+        "content": content,
         "is_completed": is_completed,
     }
 
@@ -859,6 +879,219 @@ async def get_library(current_user: dict = Depends(get_current_user)):
         "unlocked_count": len(unlocked_keys),
         "total_count": len(LIBRARY_PRODUCTS),
     }
+
+
+# ─── Admin Routes ─────────────────────────────────────────────────────────────
+
+class GrantAccessRequest(BaseModel):
+    user_id: str
+    product_key: str
+
+class UpdateChapterContent(BaseModel):
+    content: str
+
+class UpdateProductPdf(BaseModel):
+    pdf_url: str
+
+
+async def get_admin_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    user = await get_current_user(credentials)
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Access denied. Admin only.")
+    return user
+
+
+@api_router.get("/admin/stats")
+async def admin_stats(admin: dict = Depends(get_admin_user)):
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+
+    total_customers = await db.users.count_documents({"role": {"$ne": "admin"}})
+
+    pipeline = [
+        {"$match": {"payment_status": {"$in": ["success", "captured"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    result = await db.purchases.aggregate(pipeline).to_list(1)
+    total_revenue = result[0]["total"] if result else 0
+
+    today_signups = await db.users.count_documents({
+        "created_at": {"$gte": today_start},
+        "role": {"$ne": "admin"}
+    })
+
+    pipeline_today = [
+        {"$match": {"payment_status": {"$in": ["success", "captured"]}, "created_at": {"$gte": today_start}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    result_today = await db.purchases.aggregate(pipeline_today).to_list(1)
+    today_revenue = result_today[0]["total"] if result_today else 0
+
+    return {
+        "total_customers": total_customers,
+        "total_revenue": total_revenue,
+        "today_signups": today_signups,
+        "today_revenue": today_revenue,
+    }
+
+
+@api_router.get("/admin/customers")
+async def admin_customers(search: str = "", filter: str = "all", admin: dict = Depends(get_admin_user)):
+    query = {"role": {"$ne": "admin"}}
+
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"email": {"$regex": search, "$options": "i"}},
+        ]
+
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    if filter == "today":
+        query["created_at"] = {"$gte": today_start}
+
+    users_list = await db.users.find(query, {"_id": 0, "password_hash": 0}).sort("created_at", -1).to_list(500)
+
+    customers = []
+    for u in users_list:
+        user_prods = await db.user_products.find_one({"user_id": u["id"]}, {"_id": 0})
+        products = user_prods.get("product_keys", []) if user_prods else []
+
+        purchases = await db.purchases.find(
+            {"user_id": u["id"], "payment_status": {"$in": ["success", "captured"]}},
+            {"_id": 0, "amount": 1}
+        ).to_list(100)
+        total_paid = sum(p.get("amount", 0) for p in purchases)
+
+        if filter == "paid" and total_paid == 0:
+            continue
+        if filter == "free" and total_paid > 0:
+            continue
+
+        customers.append({
+            "id": u["id"],
+            "name": u.get("name", ""),
+            "email": u.get("email", ""),
+            "phone": u.get("phone", ""),
+            "created_at": u.get("created_at", ""),
+            "products": products,
+            "total_paid": total_paid,
+        })
+
+    return {"customers": customers}
+
+
+@api_router.post("/admin/grant-access")
+async def admin_grant_access(data: GrantAccessRequest, admin: dict = Depends(get_admin_user)):
+    user = await db.users.find_one({"id": data.user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if data.product_key not in PRODUCT_PRICES:
+        raise HTTPException(status_code=400, detail="Invalid product")
+
+    now = datetime.now(timezone.utc).isoformat()
+    await db.user_products.update_one(
+        {"user_id": data.user_id},
+        {"$addToSet": {"product_keys": data.product_key}, "$set": {"updated_at": now}},
+        upsert=True,
+    )
+    return {"success": True, "message": f"Access granted for {data.product_key}"}
+
+
+@api_router.get("/admin/payments")
+async def admin_payments(filter: str = "all", admin: dict = Depends(get_admin_user)):
+    query = {}
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+
+    if filter == "success":
+        query["payment_status"] = {"$in": ["success", "captured"]}
+    elif filter == "failed":
+        query["payment_status"] = "failed"
+    elif filter == "today":
+        query["created_at"] = {"$gte": today_start}
+    elif filter == "week":
+        query["created_at"] = {"$gte": (now - timedelta(days=7)).isoformat()}
+    elif filter == "month":
+        query["created_at"] = {"$gte": (now - timedelta(days=30)).isoformat()}
+
+    payments = await db.purchases.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+
+    enriched = []
+    for p in payments:
+        user = await db.users.find_one({"id": p.get("user_id")}, {"_id": 0, "name": 1, "email": 1})
+        enriched.append({
+            **p,
+            "customer_name": user.get("name", "Unknown") if user else "Unknown",
+            "customer_email": user.get("email", "") if user else "",
+        })
+
+    pipeline = [
+        {"$match": {"payment_status": {"$in": ["success", "captured"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    result = await db.purchases.aggregate(pipeline).to_list(1)
+    total_revenue = result[0]["total"] if result else 0
+
+    return {"payments": enriched, "total_revenue": total_revenue}
+
+
+@api_router.get("/admin/chapters")
+async def admin_chapters(admin: dict = Depends(get_admin_user)):
+    chapters = []
+    for ch in CHAPTERS:
+        content_doc = await db.chapter_content.find_one(
+            {"chapter_number": ch["chapter_number"]}, {"_id": 0}
+        )
+        chapters.append({
+            **ch,
+            "content": content_doc.get("content", "") if content_doc else "",
+            "has_content": bool(content_doc and content_doc.get("content")),
+        })
+    return {"chapters": chapters}
+
+
+@api_router.put("/admin/chapters/{chapter_number}")
+async def admin_update_chapter(chapter_number: int, data: UpdateChapterContent, admin: dict = Depends(get_admin_user)):
+    chapter = next((ch for ch in CHAPTERS if ch["chapter_number"] == chapter_number), None)
+    if not chapter:
+        raise HTTPException(status_code=404, detail="Chapter not found")
+
+    now = datetime.now(timezone.utc).isoformat()
+    await db.chapter_content.update_one(
+        {"chapter_number": chapter_number},
+        {"$set": {"content": data.content, "updated_at": now}},
+        upsert=True,
+    )
+    return {"success": True, "message": f"Chapter {chapter_number} content updated"}
+
+
+@api_router.get("/admin/products-settings")
+async def admin_products_settings(admin: dict = Depends(get_admin_user)):
+    products = []
+    for p in SEED_PRODUCTS:
+        settings = await db.product_settings.find_one(
+            {"product_key": p["product_key"]}, {"_id": 0}
+        )
+        products.append({
+            "product_key": p["product_key"],
+            "product_name": p["product_name"],
+            "price": p["price"],
+            "pdf_url": settings.get("pdf_url", "") if settings else "",
+        })
+    return {"products": products}
+
+
+@api_router.put("/admin/products-settings/{product_key}")
+async def admin_update_product_settings(product_key: str, data: UpdateProductPdf, admin: dict = Depends(get_admin_user)):
+    if product_key not in PRODUCT_PRICES:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    now = datetime.now(timezone.utc).isoformat()
+    await db.product_settings.update_one(
+        {"product_key": product_key},
+        {"$set": {"pdf_url": data.pdf_url, "updated_at": now}},
+        upsert=True,
+    )
+    return {"success": True, "message": f"PDF URL updated for {product_key}"}
 
 
 # ─── Payment Routes ──────────────────────────────────────────────────────────

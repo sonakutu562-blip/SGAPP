@@ -14,6 +14,11 @@ import BudgetTrackerPage from "@/pages/BudgetTrackerPage";
 import ProgressTrackerPage from "@/pages/ProgressTrackerPage";
 import LibraryPage from "@/pages/LibraryPage";
 import AiAssistantPage from "@/pages/AiAssistantPage";
+import AdminLayout from "@/layouts/AdminLayout";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminCustomers from "@/pages/admin/AdminCustomers";
+import AdminPayments from "@/pages/admin/AdminPayments";
+import AdminContent from "@/pages/admin/AdminContent";
 import "@/App.css";
 
 function ProtectedRoute({ children }) {
@@ -53,6 +58,30 @@ function PlaceholderPage({ title }) {
   );
 }
 
+function AdminRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1B3A6B]" />
+      </div>
+    );
+  }
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== "admin") {
+    return (
+      <div className="flex h-screen items-center justify-center" data-testid="access-denied">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600">Access Denied</h2>
+          <p className="text-sm text-slate-500 mt-2">You do not have permission to access this page.</p>
+          <a href="/dashboard" className="text-sm text-[#1B3A6B] underline mt-4 inline-block">Go to Dashboard</a>
+        </div>
+      </div>
+    );
+  }
+  return children;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -72,6 +101,12 @@ function App() {
             <Route path="library" element={<LibraryPage />} />
             <Route path="ai" element={<AiAssistantPage />} />
             <Route path="settings" element={<PlaceholderPage title="Settings" />} />
+          </Route>
+          <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="customers" element={<AdminCustomers />} />
+            <Route path="payments" element={<AdminPayments />} />
+            <Route path="content" element={<AdminContent />} />
           </Route>
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
