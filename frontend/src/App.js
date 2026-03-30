@@ -13,6 +13,7 @@ import ChecklistsPage from "@/pages/ChecklistsPage";
 import BudgetTrackerPage from "@/pages/BudgetTrackerPage";
 import ProgressTrackerPage from "@/pages/ProgressTrackerPage";
 import LibraryPage from "@/pages/LibraryPage";
+import AiAssistantPage from "@/pages/AiAssistantPage";
 import "@/App.css";
 
 function ProtectedRoute({ children }) {
@@ -69,7 +70,7 @@ function App() {
             <Route path="budget" element={<BudgetTrackerPage />} />
             <Route path="progress" element={<ProgressTrackerPage />} />
             <Route path="library" element={<LibraryPage />} />
-            <Route path="ai" element={<PlaceholderPage title="AI Assistant" />} />
+            <Route path="ai" element={<AiAssistantPage />} />
             <Route path="settings" element={<PlaceholderPage title="Settings" />} />
           </Route>
           <Route path="*" element={<Navigate to="/login" replace />} />

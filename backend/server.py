@@ -1091,6 +1091,103 @@ async def razorpay_webhook(request: Request):
     return {"status": "ok"}
 
 
+# ─── AI Chat Routes ──────────────────────────────────────────────────────────
+
+from emergentintegrations.llm.chat import LlmChat, UserMessage
+
+AI_SYSTEM_PROMPT = """You are "Sundar Ghar AI Saathi", a helpful assistant for Indian homeowners building their dream homes. You are based on the Sundar Ghar Construction Guide which covers:
+- Home construction planning and budgeting
+- Choosing contractors and avoiding fraud
+- Material quality checks (cement, steel, bricks, tiles, paint, plumbing)
+- Foundation, walls, roof construction
+- Legal documents and approvals needed
+- Vastu tips for Indian homes
+- Budget tracking and cost control
+- Site supervision and quality checks
+- Interior design and finishing tips
+- Home maintenance after construction
+
+RULES:
+- Answer only construction and home building related questions
+- If asked anything unrelated say: "Main sirf ghar banane ke sawaalon ka jawab de sakta hun. Koi construction related sawaal poochho!"
+- Always be warm, helpful and encouraging
+- Use simple Hindi/English mix (Hinglish) when user writes in Hindi
+- Use English when user writes in English
+- Keep answers concise and practical
+- Always refer to Indian context (Indian materials, contractors, prices)
+- When relevant, suggest which chapter of the Sundar Ghar Guide covers that topic"""
+
+_chat_instances: dict = {}
+
+
+def get_chat_instance(user_id: str) -> LlmChat:
+    if user_id not in _chat_instances:
+        _chat_instances[user_id] = LlmChat(
+            api_key=os.environ['EMERGENT_LLM_KEY'],
+            session_id=f"sundar_ghar_{user_id}",
+            system_message=AI_SYSTEM_PROMPT,
+        ).with_model("gemini", "gemini-3-flash-preview")
+    return _chat_instances[user_id]
+
+
+class ChatMessageRequest(BaseModel):
+    message: str
+
+
+@api_router.post("/chat/send")
+async def send_chat_message(data: ChatMessageRequest, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+
+    if len(data.message) > 500:
+        raise HTTPException(status_code=400, detail="Message too long. Maximum 500 characters.")
+    if not data.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty.")
+
+    try:
+        chat = get_chat_instance(user_id)
+        user_msg = UserMessage(text=data.message.strip())
+        response_text = await chat.send_message(user_msg)
+    except Exception as e:
+        logger.error(f"AI chat error for user {user_id}: {e}")
+        response_text = "Kuch technical issue aa gaya. Please thodi der baad try karein."
+
+    now = datetime.now(timezone.utc).isoformat()
+    chat_doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "message": data.message.strip(),
+        "response": response_text,
+        "created_at": now,
+    }
+    await db.chat_history.insert_one(chat_doc)
+
+    return {
+        "id": chat_doc["id"],
+        "message": chat_doc["message"],
+        "response": response_text,
+        "created_at": now,
+    }
+
+
+@api_router.get("/chat/history")
+async def get_chat_history(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    messages = await db.chat_history.find(
+        {"user_id": user_id}, {"_id": 0}
+    ).sort("created_at", -1).to_list(10)
+    messages.reverse()
+    return {"messages": messages}
+
+
+@api_router.delete("/chat/clear")
+async def clear_chat_history(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    await db.chat_history.delete_many({"user_id": user_id})
+    if user_id in _chat_instances:
+        del _chat_instances[user_id]
+    return {"success": True, "message": "Chat history cleared"}
+
+
 # ─── Health Check ────────────────────────────────────────────────────────────
 
 @api_router.get("/")
