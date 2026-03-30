@@ -1,0 +1,27 @@
+{
+  "iteration": 8,
+  "date": "2026-03-30",
+  "feature": "Razorpay Payment Gateway Integration",
+  "tests": [
+    {"id": 1, "name": "Create order for main_guide", "type": "backend", "result": "PASS", "details": "order_id returned, amount=49900 paise"},
+    {"id": 2, "name": "Create order for cost_calculator", "type": "backend", "result": "PASS", "details": "amount=24900 paise"},
+    {"id": 3, "name": "Create order for vaastu_guide", "type": "backend", "result": "PASS", "details": "amount=29700 paise"},
+    {"id": 4, "name": "Create order for maintenance_guide", "type": "backend", "result": "PASS", "details": "amount=19900 paise"},
+    {"id": 5, "name": "Create order for luxury_decor_guide", "type": "backend", "result": "PASS", "details": "amount=39900 paise"},
+    {"id": 6, "name": "Create order for tiles_guide", "type": "backend", "result": "PASS", "details": "amount=49900 paise"},
+    {"id": 7, "name": "Invalid product_key returns 400", "type": "backend", "result": "PASS"},
+    {"id": 8, "name": "Verify endpoint rejects invalid signature", "type": "backend", "result": "PASS", "details": "HTTP 400 returned"},
+    {"id": 9, "name": "Webhook rejects invalid signature", "type": "backend", "result": "PASS", "details": "HTTP 400 returned"},
+    {"id": 10, "name": "Signup still works", "type": "backend", "result": "PASS"},
+    {"id": 11, "name": "Library shows updated prices", "type": "backend", "result": "PASS", "details": "All 6 products correct prices"},
+    {"id": 12, "name": "Dashboard summary works", "type": "backend", "result": "PASS"},
+    {"id": 13, "name": "Create order with auth token", "type": "backend", "result": "PASS"},
+    {"id": 14, "name": "Buy page elements (9 data-testid)", "type": "frontend", "result": "PASS"},
+    {"id": 15, "name": "Buy page form validation", "type": "frontend", "result": "PASS", "details": "Toast shown for empty form"},
+    {"id": 16, "name": "Razorpay popup from Buy page", "type": "frontend", "result": "PASS", "details": "Razorpay iframe opened with ₹499"},
+    {"id": 17, "name": "Library page elements and prices", "type": "frontend", "result": "PASS", "details": "5 unlock buttons, correct prices, main_guide unlocked"},
+    {"id": 18, "name": "Razorpay popup from Library", "type": "frontend", "result": "PASS", "details": "Razorpay iframe opened for vaastu_guide ₹297"}
+  ],
+  "pass_rate": "100%",
+  "summary": "All 18 tests passed. Razorpay payment integration fully functional for both Buy page and Library page."
+}
