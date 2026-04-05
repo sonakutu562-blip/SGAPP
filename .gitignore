@@ -27,3 +27,7 @@ dist/
 
 # Emergent platform
 .emergent/
+-e 
+# Environment files
+*.env
+*.env.*
