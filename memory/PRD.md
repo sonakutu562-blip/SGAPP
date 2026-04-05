@@ -1,7 +1,7 @@
 # Sundar Ghar Saathi - PRD
 
 ## Original Problem Statement
-Build "Sundar Ghar Saathi" - a paid learning and tools platform for Indian homeowners with lifetime access. Includes construction guides, budget tools, checklists, AI assistant, Razorpay payments, and admin panel.
+Build "Sundar Ghar Saathi" - a paid learning and tools platform for Indian homeowners. Includes construction guides, budget tools, checklists, AI assistant, Razorpay payments, admin panel, and user settings.
 
 ## Architecture
 - **Frontend**: React.js + Tailwind CSS + shadcn/ui (port 3000)
@@ -11,59 +11,44 @@ Build "Sundar Ghar Saathi" - a paid learning and tools platform for Indian homeo
 - **Payments**: Razorpay (live keys)
 - **AI**: Gemini 3 Flash via Emergent LLM key
 
-## What's Been Implemented
+## What's Been Implemented (All Complete)
 
-### Admin Panel (Complete - 2026-03-30)
-- [x] Role-based auth: `role` field in user model, admin guard on all `/api/admin/*` endpoints
-- [x] Admin: `sonakutu562@gmail.com` (password: admin123)
-- [x] `/admin` — Dashboard with 4 stat cards (total customers, revenue, today signups, today revenue)
-- [x] `/admin/customers` — Table with search (name/email), filters (All/Paid/Free/Today), Grant Access dropdown to manually unlock products
-- [x] `/admin/payments` — Table with customer info, Razorpay ID, status badges, 6 filters (All/Success/Failed/Today/Week/Month), Total Revenue card
-- [x] `/admin/content` — Chapter editor (22 chapters, text editor, save to DB, customers see updated content), Product PDF URL manager (6 products)
-- [x] Dark sidebar layout with nav links + Logout
-- [x] Non-admin users see "Access Denied"
-- [x] Admin login redirects to /admin, normal users to /dashboard
+### Settings Page (2026-04-05)
+- [x] Profile: Avatar initials, editable name/phone, non-editable email
+- [x] Change Password: Current/new/confirm with strength indicator, backend verification
+- [x] Language: English/Hindi toggle (saved to DB, full translation pending)
+- [x] Notifications: 3 toggles (email, construction reminders, new content alerts)
+- [x] My Purchases: List of successful payments with product name, date, amount
+- [x] Danger Zone: Account deletion with "DELETE MY ACCOUNT" confirmation, removes all user data
 
-### AI Assistant Module (Complete)
-- [x] `/dashboard/ai` — Chat UI with Gemini 3 Flash, Hinglish support, 4 suggestion chips, typing indicator, history persistence, clear chat
+### Admin Panel
+- [x] Dashboard stats, Customers table + Grant Access, Payments table, Content Manager (chapter editor + PDF URLs)
 
-### Razorpay Payment Integration (Complete)
-- [x] Order creation, payment verification, webhook handling
-- [x] `/buy` page (public) + Library unlock flow
+### AI Assistant
+- [x] Gemini 3 Flash chat, Hinglish support, 4 suggestion chips, history persistence
 
-### Product Prices
-| Product | Price |
-|---------|-------|
-| main_guide | ₹499 |
-| cost_calculator | ₹249 |
-| vaastu_guide | ₹297 |
-| maintenance_guide | ₹199 |
-| luxury_decor_guide | ₹399 |
-| tiles_guide | ₹499 |
+### Razorpay Payments
+- [x] Order creation, verification, webhook, Buy page, Library unlock
 
-### Other Modules (All Complete)
-- [x] JWT Auth, Dashboard, My Guide (22 chapters), Checklists, Budget Tracker, Progress Tracker, My Library
+### Core Modules
+- [x] Auth, Dashboard, My Guide (22 chapters), Checklists, Budget Tracker, Progress Tracker, My Library
 
 ## Key DB Collections
-users, products, user_products, purchases, user_progress, checklist_items, budget_settings, budget_expenses, construction_stage, chat_history, chapter_content, product_settings
+users, products, user_products, purchases, user_progress, checklist_items, budget_settings, budget_expenses, construction_stage, chat_history, chapter_content, product_settings, user_preferences
 
 ## Admin Credentials
-- Email: sonakutu562@gmail.com
-- Password: admin123 (reset during setup)
+- Email: sonakutu562@gmail.com / Password: admin123
 
 ## Prioritized Backlog
 
 ### P1
-- [ ] Welcome email integration (SendGrid/SMTP) for new users after payment
-- [ ] PDF viewer for "View PDF" buttons in My Library
-- [ ] "Download PDF" in My Guide linked to actual file
+- [ ] Welcome email (SendGrid/SMTP) for new users after payment
+- [ ] PDF viewer for My Library products
+- [ ] Full Hindi translation
 
 ### P2
-- [ ] Settings page (profile edit, password change)
-- [ ] Hindi language support
-- [ ] Landing page at `/` for marketing
+- [ ] Landing page at `/` for marketing/SEO
+- [ ] Download PDF in My Guide
 
 ## Design System
-- Primary: #1B3A6B (deep blue), Accent: #E8500A (orange)
-- Admin sidebar: #0F172A (dark navy)
-- Font: Poppins, Components: Shadcn UI
+- Primary: #1B3A6B, Accent: #E8500A, Admin: #0F172A, Font: Poppins
