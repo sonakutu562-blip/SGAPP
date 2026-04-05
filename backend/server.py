@@ -1457,7 +1457,10 @@ async def razorpay_webhook(request: Request):
 
 # ─── AI Chat Routes ──────────────────────────────────────────────────────────
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from google import genai
+from google.genai import types
+
+gemini_client = genai.Client(api_key=os.environ['GEMINI_API_KEY'])
 
 AI_SYSTEM_PROMPT = """You are "Sundar Ghar AI Saathi", a helpful assistant for Indian homeowners building their dream homes. You are based on the Sundar Ghar Construction Guide which covers:
 - Home construction planning and budgeting
@@ -1484,13 +1487,16 @@ RULES:
 _chat_instances: dict = {}
 
 
-def get_chat_instance(user_id: str) -> LlmChat:
+def get_chat_instance(user_id: str):
     if user_id not in _chat_instances:
-        _chat_instances[user_id] = LlmChat(
-            api_key=os.environ['EMERGENT_LLM_KEY'],
-            session_id=f"sundar_ghar_{user_id}",
-            system_message=AI_SYSTEM_PROMPT,
-        ).with_model("gemini", "gemini-3-flash-preview")
+        _chat_instances[user_id] = gemini_client.aio.chats.create(
+            model="gemini-2.0-flash",
+            config=types.GenerateContentConfig(
+                system_instruction=AI_SYSTEM_PROMPT,
+                temperature=0.7,
+                max_output_tokens=1024,
+            ),
+        )
     return _chat_instances[user_id]
 
 
@@ -1509,8 +1515,8 @@ async def send_chat_message(data: ChatMessageRequest, current_user: dict = Depen
 
     try:
         chat = get_chat_instance(user_id)
-        user_msg = UserMessage(text=data.message.strip())
-        response_text = await chat.send_message(user_msg)
+        response = await chat.send_message(data.message.strip())
+        response_text = response.text
     except Exception as e:
         logger.error(f"AI chat error for user {user_id}: {e}")
         response_text = "Kuch technical issue aa gaya. Please thodi der baad try karein."
