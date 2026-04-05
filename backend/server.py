@@ -1094,6 +1094,137 @@ async def admin_update_product_settings(product_key: str, data: UpdateProductPdf
     return {"success": True, "message": f"PDF URL updated for {product_key}"}
 
 
+# ─── Settings Routes ─────────────────────────────────────────────────────────
+
+class UpdateProfileRequest(BaseModel):
+    name: str
+    phone: str
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+class PreferencesRequest(BaseModel):
+    language: str = "en"
+    email_notifications: bool = True
+    construction_reminders: bool = True
+    new_content_alerts: bool = True
+
+class DeleteAccountRequest(BaseModel):
+    confirmation: str
+
+
+@api_router.put("/settings/profile")
+async def update_profile(data: UpdateProfileRequest, current_user: dict = Depends(get_current_user)):
+    if not data.name.strip():
+        raise HTTPException(status_code=400, detail="Name cannot be empty")
+
+    now = datetime.now(timezone.utc).isoformat()
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {"name": data.name.strip(), "phone": data.phone.strip(), "updated_at": now}},
+    )
+    return {"success": True, "name": data.name.strip(), "phone": data.phone.strip()}
+
+
+@api_router.put("/settings/password")
+async def change_password(data: ChangePasswordRequest, current_user: dict = Depends(get_current_user)):
+    user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not verify_password(data.current_password, user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    if len(data.new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+
+    now = datetime.now(timezone.utc).isoformat()
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {"password_hash": hash_password(data.new_password), "updated_at": now}},
+    )
+    return {"success": True, "message": "Password updated successfully"}
+
+
+@api_router.get("/settings/preferences")
+async def get_preferences(current_user: dict = Depends(get_current_user)):
+    prefs = await db.user_preferences.find_one({"user_id": current_user["id"]}, {"_id": 0})
+    if not prefs:
+        prefs = {
+            "language": "en",
+            "email_notifications": True,
+            "construction_reminders": True,
+            "new_content_alerts": True,
+        }
+    return {
+        "language": prefs.get("language", "en"),
+        "email_notifications": prefs.get("email_notifications", True),
+        "construction_reminders": prefs.get("construction_reminders", True),
+        "new_content_alerts": prefs.get("new_content_alerts", True),
+    }
+
+
+@api_router.put("/settings/preferences")
+async def update_preferences(data: PreferencesRequest, current_user: dict = Depends(get_current_user)):
+    now = datetime.now(timezone.utc).isoformat()
+    await db.user_preferences.update_one(
+        {"user_id": current_user["id"]},
+        {"$set": {
+            "language": data.language,
+            "email_notifications": data.email_notifications,
+            "construction_reminders": data.construction_reminders,
+            "new_content_alerts": data.new_content_alerts,
+            "updated_at": now,
+        }},
+        upsert=True,
+    )
+    return {"success": True}
+
+
+@api_router.get("/settings/purchases")
+async def get_user_purchases(current_user: dict = Depends(get_current_user)):
+    purchases = await db.purchases.find(
+        {"user_id": current_user["id"], "payment_status": {"$in": ["success", "captured"]}},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+
+    enriched = []
+    for p in purchases:
+        product = next(
+            (pr for pr in SEED_PRODUCTS if pr["product_key"] == p.get("product_key")),
+            None,
+        )
+        enriched.append({
+            "product_name": product["product_name"] if product else p.get("product_key", "Unknown"),
+            "amount": p.get("amount", 0),
+            "created_at": p.get("created_at", ""),
+            "razorpay_payment_id": p.get("razorpay_payment_id", ""),
+        })
+    return {"purchases": enriched}
+
+
+@api_router.delete("/settings/account")
+async def delete_account(data: DeleteAccountRequest, current_user: dict = Depends(get_current_user)):
+    if data.confirmation != "DELETE MY ACCOUNT":
+        raise HTTPException(status_code=400, detail="Please type 'DELETE MY ACCOUNT' to confirm")
+
+    uid = current_user["id"]
+    await db.users.delete_one({"id": uid})
+    await db.user_products.delete_many({"user_id": uid})
+    await db.user_progress.delete_many({"user_id": uid})
+    await db.checklist_items.delete_many({"user_id": uid})
+    await db.budget_settings.delete_many({"user_id": uid})
+    await db.budget_expenses.delete_many({"user_id": uid})
+    await db.construction_stage.delete_many({"user_id": uid})
+    await db.chat_history.delete_many({"user_id": uid})
+    await db.user_preferences.delete_many({"user_id": uid})
+    await db.purchases.delete_many({"user_id": uid})
+
+    logger.info(f"Account deleted: {current_user['email']}")
+    return {"success": True, "message": "Account deleted successfully"}
+
+
 # ─── Payment Routes ──────────────────────────────────────────────────────────
 
 class CreateOrderRequest(BaseModel):

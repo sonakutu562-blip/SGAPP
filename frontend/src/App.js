@@ -14,6 +14,7 @@ import BudgetTrackerPage from "@/pages/BudgetTrackerPage";
 import ProgressTrackerPage from "@/pages/ProgressTrackerPage";
 import LibraryPage from "@/pages/LibraryPage";
 import AiAssistantPage from "@/pages/AiAssistantPage";
+import SettingsPage from "@/pages/SettingsPage";
 import AdminLayout from "@/layouts/AdminLayout";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminCustomers from "@/pages/admin/AdminCustomers";
@@ -100,7 +101,7 @@ function App() {
             <Route path="progress" element={<ProgressTrackerPage />} />
             <Route path="library" element={<LibraryPage />} />
             <Route path="ai" element={<AiAssistantPage />} />
-            <Route path="settings" element={<PlaceholderPage title="Settings" />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
           <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
             <Route index element={<AdminDashboard />} />
