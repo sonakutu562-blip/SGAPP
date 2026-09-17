@@ -136,17 +136,16 @@ export class PhysicsWorld {
     }
 
     // Predict trajectory for a given start position and velocity
-    predictTrajectory(startX, startY, vx, vy, steps = 40) {
+    predictTrajectory(startX, startY, vx, vy, steps = 60) {
         const points = [];
         let x = startX;
         let y = startY;
         let velX = vx;
         let velY = vy;
-        const gravity = this.engine.gravity.y * 0.001 * 60;
-        const dt = 1000 / 60;
+        const gravity = this.engine.gravity.y;
 
         for (let i = 0; i < steps; i++) {
-            velY += gravity * dt / 15;
+            velY += gravity * 0.001;
             x += velX;
             y += velY;
             if (y > 430) break;

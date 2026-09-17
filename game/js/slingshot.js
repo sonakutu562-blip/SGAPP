@@ -2,8 +2,8 @@ import { clamp, dist } from './utils.js';
 
 const SLING_X = 160;
 const SLING_Y = 360;
-const MAX_PULL = 90;
-const LAUNCH_POWER = 0.18;
+const MAX_PULL = 120;
+const LAUNCH_POWER = 0.35;
 
 export { SLING_X, SLING_Y };
 
@@ -20,7 +20,7 @@ export class Slingshot {
 
     startPull(worldX, worldY, birdRadius) {
         const d = dist(worldX, worldY, this.anchorX, this.anchorY);
-        if (d < birdRadius + 30) {
+        if (d < birdRadius + 50) {
             this.pulling = true;
             return true;
         }
