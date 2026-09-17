@@ -1,4 +1,5 @@
 import { MATERIAL_PROPS, BIRD_PROPS } from './physics.js';
+import { WORLDS } from './worlds.js';
 
 export class Renderer {
     constructor(canvas) {
@@ -19,22 +20,18 @@ export class Renderer {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
-    drawBackground() {
+    drawBackground(worldIndex, levelId) {
         const ctx = this.ctx;
-        // Use world coordinates (drawn inside camera transform)
-        const worldW = 1400;
-        const worldH = 900;
+        const w = WORLDS[worldIndex] || WORLDS[0];
 
-        // Sky gradient
         const sky = ctx.createLinearGradient(0, -200, 0, 440);
-        sky.addColorStop(0, '#87CEEB');
-        sky.addColorStop(0.7, '#B0E0FF');
-        sky.addColorStop(1, '#E8F4FD');
+        sky.addColorStop(0, w.sky[0]);
+        sky.addColorStop(0.6, w.sky[1]);
+        sky.addColorStop(1, w.sky[2]);
         ctx.fillStyle = sky;
-        ctx.fillRect(-200, -200, worldW + 400, worldH + 400);
+        ctx.fillRect(-200, -200, 1600, 900);
 
-        // Clouds
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillStyle = 'rgba(255, 255, 255, ' + (worldIndex >= 6 ? 0.15 : 0.5) + ')';
         this._drawCloud(ctx, 100, 60, 50);
         this._drawCloud(ctx, 350, 40, 40);
         this._drawCloud(ctx, 600, 80, 45);
@@ -42,25 +39,31 @@ export class Renderer {
         this._drawCloud(ctx, 500, 100, 35);
         this._drawCloud(ctx, 1050, 50, 45);
 
-        // Hills
-        ctx.fillStyle = '#7ec850';
+        if (worldIndex === 9) {
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            for (let i = 0; i < 30; i++) {
+                const sx = ((i * 137 + levelId * 47) % 1200);
+                const sy = ((i * 89 + levelId * 31) % 350);
+                ctx.fillRect(sx, sy, 2, 2);
+            }
+        }
+
+        ctx.fillStyle = w.hill;
         ctx.beginPath();
         ctx.moveTo(-50, 440);
-        for (let x = -50; x <= worldW; x += 20) {
+        for (let x = -50; x <= 1400; x += 20) {
             ctx.lineTo(x, 440 - Math.sin(x * 0.008) * 15 - Math.sin(x * 0.02) * 5);
         }
-        ctx.lineTo(worldW, worldH);
-        ctx.lineTo(-50, worldH);
+        ctx.lineTo(1400, 600);
+        ctx.lineTo(-50, 600);
         ctx.closePath();
         ctx.fill();
 
-        // Ground
-        ctx.fillStyle = '#5da832';
-        ctx.fillRect(-50, 430, worldW + 100, worldH);
+        ctx.fillStyle = w.gnd;
+        ctx.fillRect(-50, 430, 1500, 200);
 
-        // Ground detail
-        ctx.fillStyle = '#4e9228';
-        ctx.fillRect(-50, 430, worldW + 100, 4);
+        ctx.fillStyle = darken(w.gnd, 20);
+        ctx.fillRect(-50, 430, 1500, 4);
     }
 
     _drawCloud(ctx, x, y, size) {
@@ -81,38 +84,46 @@ export class Renderer {
         ctx.translate(body.position.x, body.position.y);
         ctx.rotate(body.angle);
 
-        // Damage indication: lerp color toward darker
-        const dmgRatio = Math.max(0, hp / maxHp);
-        const baseColor = mat.color;
+        if (type === 'tnt') {
+            ctx.fillStyle = '#cc2200';
+            ctx.strokeStyle = '#991100';
+            ctx.lineWidth = 2;
+            ctx.fillRect(-w / 2, -h / 2, w, h);
+            ctx.strokeRect(-w / 2, -h / 2, w, h);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold ' + (Math.min(w, h) * 0.5) + 'px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('T', 0, 0);
+        } else {
+            const dmgRatio = Math.max(0, hp / maxHp);
+            ctx.fillStyle = mat.color;
+            ctx.strokeStyle = mat.stroke;
+            ctx.lineWidth = 1.5;
+            ctx.fillRect(-w / 2, -h / 2, w, h);
+            ctx.strokeRect(-w / 2, -h / 2, w, h);
 
-        ctx.fillStyle = baseColor;
-        ctx.strokeStyle = mat.stroke;
-        ctx.lineWidth = 1.5;
-        ctx.fillRect(-w / 2, -h / 2, w, h);
-        ctx.strokeRect(-w / 2, -h / 2, w, h);
+            if (dmgRatio < 0.7) {
+                ctx.strokeStyle = `rgba(0, 0, 0, ${0.3 * (1 - dmgRatio)})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(-w * 0.2, -h * 0.3);
+                ctx.lineTo(w * 0.1, h * 0.1);
+                ctx.lineTo(w * 0.3, h * 0.4);
+                ctx.stroke();
+            }
+            if (dmgRatio < 0.4) {
+                ctx.beginPath();
+                ctx.moveTo(w * 0.2, -h * 0.4);
+                ctx.lineTo(-w * 0.1, 0);
+                ctx.lineTo(-w * 0.3, h * 0.3);
+                ctx.stroke();
+            }
 
-        // Damage cracks
-        if (dmgRatio < 0.7) {
-            ctx.strokeStyle = `rgba(0, 0, 0, ${0.3 * (1 - dmgRatio)})`;
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(-w * 0.2, -h * 0.3);
-            ctx.lineTo(w * 0.1, h * 0.1);
-            ctx.lineTo(w * 0.3, h * 0.4);
-            ctx.stroke();
-        }
-        if (dmgRatio < 0.4) {
-            ctx.beginPath();
-            ctx.moveTo(w * 0.2, -h * 0.4);
-            ctx.lineTo(-w * 0.1, 0);
-            ctx.lineTo(-w * 0.3, h * 0.3);
-            ctx.stroke();
-        }
-
-        // Glass transparency effect
-        if (type === 'glass') {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-            ctx.fillRect(-w / 2 + 2, -h / 2 + 2, w * 0.3, h * 0.3);
+            if (type === 'glass') {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.fillRect(-w / 2 + 2, -h / 2 + 2, w * 0.3, h * 0.3);
+            }
         }
 
         ctx.restore();
@@ -124,61 +135,55 @@ export class Renderer {
         const x = body.position.x;
         const y = body.position.y;
         const dmgRatio = Math.max(0, hp / maxHp);
+        const r = radius;
 
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(body.angle);
 
-        // Body
         ctx.fillStyle = '#66cc44';
         ctx.strokeStyle = '#448822';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
-        // Snout
         ctx.fillStyle = '#55bb33';
         ctx.beginPath();
-        ctx.ellipse(0, radius * 0.15, radius * 0.45, radius * 0.3, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, r * 0.15, r * 0.45, r * 0.3, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#448822';
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Nostrils
         ctx.fillStyle = '#338811';
         ctx.beginPath();
-        ctx.ellipse(-radius * 0.12, radius * 0.15, 2, 2.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(-r * 0.12, r * 0.15, 2, 2.5, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.ellipse(radius * 0.12, radius * 0.15, 2, 2.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(r * 0.12, r * 0.15, 2, 2.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Eyes
-        const eyeY = -radius * 0.2;
-        const eyeX = radius * 0.25;
+        const eyeY = -r * 0.2;
+        const eyeX = r * 0.25;
 
-        // White
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.ellipse(-eyeX, eyeY, radius * 0.2, radius * 0.22, 0, 0, Math.PI * 2);
+        ctx.ellipse(-eyeX, eyeY, r * 0.2, r * 0.22, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.ellipse(eyeX, eyeY, radius * 0.2, radius * 0.22, 0, 0, Math.PI * 2);
+        ctx.ellipse(eyeX, eyeY, r * 0.2, r * 0.22, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Pupils
         ctx.fillStyle = '#222';
         ctx.beginPath();
-        ctx.arc(-eyeX + 1, eyeY, radius * 0.08, 0, Math.PI * 2);
+        ctx.arc(-eyeX + 1, eyeY, r * 0.08, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(eyeX + 1, eyeY, radius * 0.08, 0, Math.PI * 2);
+        ctx.arc(eyeX + 1, eyeY, r * 0.08, 0, Math.PI * 2);
         ctx.fill();
 
-        // Damage expression
         if (dmgRatio < 0.5) {
             ctx.strokeStyle = '#222';
             ctx.lineWidth = 1.5;
@@ -196,11 +201,10 @@ export class Renderer {
             ctx.stroke();
         }
 
-        // Bruises
         if (dmgRatio < 0.7) {
             ctx.fillStyle = `rgba(80, 60, 20, ${0.3 * (1 - dmgRatio)})`;
             ctx.beginPath();
-            ctx.arc(radius * 0.3, -radius * 0.1, radius * 0.25, 0, Math.PI * 2);
+            ctx.arc(r * 0.3, -r * 0.1, r * 0.25, 0, Math.PI * 2);
             ctx.fill();
         }
 
@@ -219,7 +223,6 @@ export class Renderer {
         ctx.translate(x, y);
         ctx.rotate(body.angle);
 
-        // Body
         ctx.fillStyle = props.color;
         ctx.strokeStyle = darken(props.color, 30);
         ctx.lineWidth = 2;
@@ -228,13 +231,11 @@ export class Renderer {
         ctx.fill();
         ctx.stroke();
 
-        // Belly highlight
         ctx.fillStyle = lighten(props.color, 40);
         ctx.beginPath();
         ctx.ellipse(0, r * 0.2, r * 0.5, r * 0.35, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Eyes
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.ellipse(-r * 0.2, -r * 0.15, r * 0.2, r * 0.22, 0, 0, Math.PI * 2);
@@ -251,7 +252,6 @@ export class Renderer {
         ctx.arc(r * 0.25, -r * 0.12, r * 0.08, 0, Math.PI * 2);
         ctx.fill();
 
-        // Eyebrows (angry!)
         ctx.strokeStyle = '#222';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -263,7 +263,6 @@ export class Renderer {
         ctx.lineTo(r * 0.05, -r * 0.3);
         ctx.stroke();
 
-        // Beak
         ctx.fillStyle = '#ff9900';
         ctx.beginPath();
         ctx.moveTo(r * 0.5, r * 0.05);
@@ -272,14 +271,12 @@ export class Renderer {
         ctx.closePath();
         ctx.fill();
 
-        // Type-specific markers
         if (type === 'blue') {
             ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.beginPath();
             ctx.arc(-r * 0.3, -r * 0.3, r * 0.15, 0, Math.PI * 2);
             ctx.fill();
         } else if (type === 'yellow') {
-            // Crest
             ctx.fillStyle = '#ffaa00';
             ctx.beginPath();
             ctx.moveTo(0, -r);
@@ -288,7 +285,6 @@ export class Renderer {
             ctx.closePath();
             ctx.fill();
         } else if (type === 'black') {
-            // Fuse
             ctx.strokeStyle = '#888';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -299,25 +295,58 @@ export class Renderer {
             ctx.beginPath();
             ctx.arc(0, -r * 1.3, 3, 0, Math.PI * 2);
             ctx.fill();
+        } else if (type === 'green') {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.beginPath();
+            ctx.moveTo(-r * 0.6, r * 0.1);
+            ctx.lineTo(-r * 0.9, -r * 0.2);
+            ctx.lineTo(-r * 0.7, r * 0.3);
+            ctx.closePath();
+            ctx.fill();
+        } else if (type === 'white') {
+            ctx.fillStyle = '#ddd';
+            ctx.beginPath();
+            ctx.arc(-r * 0.3, r * 0.1, r * 0.12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(r * 0.2, r * 0.3, r * 0.1, 0, Math.PI * 2);
+            ctx.fill();
         }
 
         ctx.restore();
     }
 
-    drawBirdIcon(ctx, type, x, y, size) {
-        const props = BIRD_PROPS[type];
-        ctx.fillStyle = props.color;
+    drawEgg(egg) {
+        if (!egg) return;
+        const ctx = this.ctx;
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = '#ccc';
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+        ctx.arc(egg.position.x, egg.position.y, 8, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = darken(props.color, 30);
-        ctx.lineWidth = 1.5;
         ctx.stroke();
+    }
+
+    drawPowerMeter(pullDist, maxPull, slingX, slingY) {
+        if (pullDist <= 0) return;
+        const ctx = this.ctx;
+        const pct = pullDist / maxPull;
+        ctx.save();
+        ctx.translate(slingX, slingY - 55);
+        const start = Math.PI;
+        const end = Math.PI + Math.PI * pct;
+        ctx.beginPath();
+        ctx.arc(0, 0, 30, start, end);
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = pct < 0.4 ? '#4CAF50' : pct < 0.75 ? '#FFC107' : '#F44336';
+        ctx.stroke();
+        ctx.restore();
     }
 }
 
 function darken(hex, amount) {
-    const num = parseInt(hex.slice(1), 16);
+    const num = parseInt(hex.replace('#', ''), 16);
     const r = Math.max(0, (num >> 16) - amount);
     const g = Math.max(0, ((num >> 8) & 0xff) - amount);
     const b = Math.max(0, (num & 0xff) - amount);
@@ -325,7 +354,7 @@ function darken(hex, amount) {
 }
 
 function lighten(hex, amount) {
-    const num = parseInt(hex.slice(1), 16);
+    const num = parseInt(hex.replace('#', ''), 16);
     const r = Math.min(255, (num >> 16) + amount);
     const g = Math.min(255, ((num >> 8) & 0xff) + amount);
     const b = Math.min(255, (num & 0xff) + amount);

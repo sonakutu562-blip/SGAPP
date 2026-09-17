@@ -67,35 +67,40 @@ export class SoundManager {
     }
 
     destroy() {
-        this._noise(0.15, 0.25);
-        this._play(100, 0.2, 'sawtooth', 0.15);
+        this._play(200, 0.2, 'sawtooth', 0.15);
+        this._noise(0.15, 0.1);
     }
 
     explosion() {
-        this._noise(0.4, 0.4);
-        this._play(60, 0.3, 'sawtooth', 0.25);
-        setTimeout(() => this._noise(0.2, 0.2), 100);
+        this._noise(0.4, 0.3);
+        this._play(80, 0.3, 'sawtooth', 0.2);
     }
 
     pigSqueal() {
-        this._play(600, 0.15, 'sine', 0.2);
-        setTimeout(() => this._play(800, 0.1, 'sine', 0.15), 50);
+        this._play(600, 0.1, 'sine', 0.2);
+        setTimeout(() => this._play(400, 0.15, 'sine', 0.15), 80);
     }
 
     victory() {
         const notes = [523, 659, 784, 1047];
         notes.forEach((freq, i) => {
-            setTimeout(() => this._play(freq, 0.2, 'sine', 0.2), i * 120);
+            setTimeout(() => this._play(freq, 0.3, 'sine', 0.2), i * 120);
         });
     }
 
     defeat() {
-        this._play(300, 0.3, 'sine', 0.2);
-        setTimeout(() => this._play(200, 0.4, 'sine', 0.2), 200);
+        [400, 350, 300, 250].forEach((f, i) => {
+            setTimeout(() => this._play(f, 0.25, 'sawtooth', 0.12), i * 150);
+        });
     }
 
     click() {
         this._play(800, 0.05, 'sine', 0.15);
+    }
+
+    combo() {
+        this._play(880, 0.1);
+        setTimeout(() => this._play(1100, 0.15, 'sine', 0.2), 60);
     }
 
     stretch(pull) {

@@ -17,6 +17,7 @@
                     <h1 class="game-title">Furious Fowl</h1>
                     <p class="subtitle">A Physics Slingshot Game</p>
                     <button id="btn-play" class="btn btn-primary">Play</button>
+                    <button id="btn-achievements" class="btn btn-secondary">Achievements</button>
                     <button id="btn-leaderboard" class="btn btn-secondary">Leaderboard</button>
                     <div class="sound-toggle" id="sound-toggle">
                         <span id="sound-icon">&#x1f50a;</span>
@@ -24,12 +25,21 @@
                 </div>
             </div>
 
+            <!-- World Select -->
+            <div id="world-select" class="screen">
+                <div class="menu-content wide">
+                    <h2>Select World</h2>
+                    <div id="world-grid" class="world-grid"></div>
+                    <button id="btn-back-worlds" class="btn btn-secondary">Back</button>
+                </div>
+            </div>
+
             <!-- Level Select -->
             <div id="level-select" class="screen">
                 <div class="menu-content">
-                    <h2>Select Level</h2>
+                    <h2 id="world-title">World</h2>
                     <div id="level-grid" class="level-grid"></div>
-                    <button id="btn-back-menu" class="btn btn-secondary">Back</button>
+                    <button id="btn-back-levels" class="btn btn-secondary">Back</button>
                 </div>
             </div>
 
@@ -44,6 +54,9 @@
                         <button id="btn-pause" class="btn-icon" title="Pause">&#x23f8;</button>
                     </div>
                 </div>
+                <div id="wind-indicator" class="wind-indicator" style="display:none;"></div>
+                <div id="combo-popup" class="combo-popup"></div>
+                <div id="tip-text" class="tip-text">Pull the bird back to aim!</div>
                 <div class="hud-bottom">
                     <div id="bird-queue" class="bird-queue"></div>
                 </div>
@@ -87,6 +100,15 @@
                     <h2>Leaderboard</h2>
                     <div id="leaderboard-list" class="leaderboard-list"></div>
                     <button id="btn-back-leaderboard" class="btn btn-secondary">Back</button>
+                </div>
+            </div>
+
+            <!-- Achievements -->
+            <div id="achievements-screen" class="screen">
+                <div class="menu-content wide">
+                    <h2>Achievements</h2>
+                    <div id="achievements-grid" class="achievements-grid"></div>
+                    <button id="btn-back-achievements" class="btn btn-secondary">Back</button>
                 </div>
             </div>
         </div>
