@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Furious Fowl - Physics Slingshot Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+
+        <div id="ui-overlay">
+            <!-- Start Menu -->
+            <div id="start-menu" class="screen active">
+                <div class="menu-content">
+                    <h1 class="game-title">Furious Fowl</h1>
+                    <p class="subtitle">A Physics Slingshot Game</p>
+                    <button id="btn-play" class="btn btn-primary">Play</button>
+                    <button id="btn-leaderboard" class="btn btn-secondary">Leaderboard</button>
+                    <div class="sound-toggle" id="sound-toggle">
+                        <span id="sound-icon">&#x1f50a;</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Level Select -->
+            <div id="level-select" class="screen">
+                <div class="menu-content">
+                    <h2>Select Level</h2>
+                    <div id="level-grid" class="level-grid"></div>
+                    <button id="btn-back-menu" class="btn btn-secondary">Back</button>
+                </div>
+            </div>
+
+            <!-- HUD -->
+            <div id="hud" class="screen">
+                <div class="hud-top">
+                    <div class="hud-left">
+                        <span id="hud-level">Level 1</span>
+                        <span id="hud-score">Score: 0</span>
+                    </div>
+                    <div class="hud-right">
+                        <button id="btn-pause" class="btn-icon" title="Pause">&#x23f8;</button>
+                    </div>
+                </div>
+                <div class="hud-bottom">
+                    <div id="bird-queue" class="bird-queue"></div>
+                </div>
+            </div>
+
+            <!-- Pause Menu -->
+            <div id="pause-menu" class="screen overlay">
+                <div class="menu-content">
+                    <h2>Paused</h2>
+                    <button id="btn-resume" class="btn btn-primary">Resume</button>
+                    <button id="btn-restart" class="btn btn-secondary">Restart</button>
+                    <button id="btn-quit" class="btn btn-secondary">Quit to Menu</button>
+                </div>
+            </div>
+
+            <!-- Victory Screen -->
+            <div id="victory-screen" class="screen overlay">
+                <div class="menu-content">
+                    <h2>Level Complete!</h2>
+                    <div id="stars-display" class="stars-display"></div>
+                    <p id="final-score" class="final-score"></p>
+                    <button id="btn-next-level" class="btn btn-primary">Next Level</button>
+                    <button id="btn-replay" class="btn btn-secondary">Replay</button>
+                    <button id="btn-victory-menu" class="btn btn-secondary">Menu</button>
+                </div>
+            </div>
+
+            <!-- Game Over Screen -->
+            <div id="gameover-screen" class="screen overlay">
+                <div class="menu-content">
+                    <h2>Level Failed</h2>
+                    <p class="gameover-text">Pigs remaining!</p>
+                    <button id="btn-retry" class="btn btn-primary">Retry</button>
+                    <button id="btn-gameover-menu" class="btn btn-secondary">Menu</button>
+                </div>
+            </div>
+
+            <!-- Leaderboard -->
+            <div id="leaderboard-screen" class="screen">
+                <div class="menu-content">
+                    <h2>Leaderboard</h2>
+                    <div id="leaderboard-list" class="leaderboard-list"></div>
+                    <button id="btn-back-leaderboard" class="btn btn-secondary">Back</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/matter.min.js"></script>
+    <script type="module" src="js/game.js"></script>
+</body>
+</html>

@@ -1,0 +1,367 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    overflow: hidden;
+    background: #1a1a2e;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+}
+
+#game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#game-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+#ui-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.screen {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+}
+
+.screen.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.screen.overlay {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+#start-menu {
+    background: linear-gradient(135deg, #0f3460, #16213e);
+}
+
+#level-select,
+#leaderboard-screen {
+    background: linear-gradient(135deg, #0f3460, #16213e);
+}
+
+.menu-content {
+    text-align: center;
+    color: #fff;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+}
+
+.game-title {
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: #e94560;
+    text-shadow: 3px 3px 0 #0f3460, 0 0 20px rgba(233, 69, 96, 0.5);
+    margin-bottom: 0.25rem;
+    letter-spacing: 2px;
+}
+
+.subtitle {
+    font-size: 1.1rem;
+    color: #a8b2d1;
+    margin-bottom: 2.5rem;
+}
+
+.btn {
+    display: block;
+    width: 100%;
+    max-width: 280px;
+    margin: 0.75rem auto;
+    padding: 0.9rem 2rem;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    letter-spacing: 1px;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #e94560, #c23152);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+}
+
+.btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(233, 69, 96, 0.6);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #a8b2d1;
+    border: 2px solid rgba(168, 178, 209, 0.3);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.sound-toggle {
+    margin-top: 1.5rem;
+    cursor: pointer;
+    font-size: 1.8rem;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.sound-toggle:hover {
+    opacity: 1;
+}
+
+.sound-toggle.muted {
+    opacity: 0.3;
+}
+
+/* Level Grid */
+.level-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 1.5rem 0;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.level-btn {
+    aspect-ratio: 1;
+    border: 2px solid rgba(168, 178, 209, 0.3);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    font-size: 1.3rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s, background 0.15s;
+    position: relative;
+}
+
+.level-btn:hover {
+    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.level-btn.locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.level-btn .level-stars {
+    font-size: 0.7rem;
+    margin-top: 4px;
+    letter-spacing: 2px;
+}
+
+/* HUD */
+#hud {
+    pointer-events: none;
+}
+
+#hud.active {
+    display: block;
+}
+
+.hud-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    pointer-events: auto;
+}
+
+.hud-left {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.hud-left span {
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.btn-icon {
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font-size: 1.4rem;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    transition: background 0.2s;
+}
+
+.btn-icon:hover {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.hud-bottom {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+}
+
+.bird-queue {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.bird-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+}
+
+/* Stars Display */
+.stars-display {
+    font-size: 3rem;
+    margin: 1rem 0;
+    letter-spacing: 8px;
+}
+
+.star {
+    display: inline-block;
+    transition: transform 0.3s, opacity 0.3s;
+}
+
+.star.earned {
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    animation: starPop 0.4s ease-out;
+}
+
+.star.empty {
+    color: #444;
+    opacity: 0.5;
+}
+
+@keyframes starPop {
+    0% { transform: scale(0); }
+    60% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+.final-score {
+    font-size: 1.5rem;
+    color: #ffd700;
+    margin: 0.5rem 0 1.5rem;
+}
+
+.gameover-text {
+    color: #a8b2d1;
+    margin-bottom: 1.5rem;
+}
+
+/* Leaderboard */
+.leaderboard-list {
+    max-height: 50vh;
+    overflow-y: auto;
+    margin: 1rem 0;
+}
+
+.leaderboard-entry {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    color: #a8b2d1;
+    font-weight: 600;
+}
+
+.leaderboard-entry .lb-level {
+    color: #fff;
+}
+
+.leaderboard-entry .lb-score {
+    color: #ffd700;
+}
+
+.leaderboard-entry .lb-stars {
+    letter-spacing: 2px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .game-title {
+        font-size: 2.2rem;
+    }
+
+    .level-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .btn {
+        font-size: 1rem;
+        padding: 0.75rem 1.5rem;
+    }
+}
+
+@media (max-height: 500px) {
+    .game-title {
+        font-size: 2rem;
+        margin-bottom: 0;
+    }
+
+    .subtitle {
+        margin-bottom: 1rem;
+    }
+
+    .btn {
+        padding: 0.6rem 1.5rem;
+        margin: 0.4rem auto;
+    }
+}
